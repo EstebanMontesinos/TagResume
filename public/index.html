@@ -6,8 +6,6 @@
   <title>Resume Optimizer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -44,7 +42,7 @@
     @media(max-width:620px){ .upload-grid{ grid-template-columns:1fr; } }
     .field-label { display:block; font-size:11px; font-weight:500; font-family:var(--mono); text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:8px; }
 
-    .drop-zone { border:1.5px dashed var(--border-strong); border-radius:var(--radius); padding:20px 16px; text-align:center; cursor:pointer; background:#fafafa; transition:all 0.15s; margin-bottom:8px; user-select:none; }
+    .drop-zone { display:block; border:1.5px dashed var(--border-strong); border-radius:var(--radius); padding:20px 16px; text-align:center; cursor:pointer; background:#fafafa; transition:all 0.15s; margin-bottom:8px; user-select:none; position:relative; }
     .drop-zone:hover { border-color:var(--accent); background:var(--accent-light); }
     .drop-zone.over   { border-color:var(--accent); background:var(--accent-light); }
     .drop-zone.loaded { border-style:solid; border-color:var(--accent); background:var(--accent-light); }
@@ -194,13 +192,16 @@
     <div class="upload-grid">
       <div>
         <span class="field-label">Resume</span>
-        <div class="drop-zone" id="drop-zone">
-          <div class="drop-icon" id="drop-icon">📄</div>
-          <div class="drop-main">Click to upload resume</div>
-          <div class="drop-sub">PDF · DOCX · TXT — or drag &amp; drop</div>
-          <div class="drop-name" id="drop-name"></div>
+        <!-- File input visible and accessible - simplest reliable approach -->
+        <div id="drop-zone" style="border:1.5px dashed rgba(0,0,0,0.22);border-radius:10px;padding:20px 16px;text-align:center;background:#fafafa;margin-bottom:8px;">
+          <div id="drop-icon" style="font-size:26px;margin-bottom:6px;">📄</div>
+          <div style="font-size:13px;font-weight:500;margin-bottom:6px;" id="drop-main">Upload your resume</div>
+          <input type="file" id="file-inp" accept=".pdf,.docx,.txt"
+            style="display:block;margin:0 auto 6px;font-size:13px;font-family:inherit;cursor:pointer;"
+            onchange="handleFileInput(this)">
+          <div style="font-size:11px;color:#6b6b6b;font-family:monospace;">PDF · DOCX · TXT</div>
+          <div id="drop-name" style="display:none;margin-top:8px;font-size:12px;font-family:monospace;font-weight:500;"></div>
         </div>
-        <input type="file" id="file-inp" accept=".pdf,.docx,.txt" style="display:none">
         <div class="divider-text">— or paste below —</div>
         <textarea id="resume-ta" rows="9" placeholder="Paste resume text here..."></textarea>
       </div>
@@ -244,31 +245,31 @@
 
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
-// ── Init ─────────────────────────────────────────────────────────────────────
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
+// -- Init ---------------------------------------------------------------------
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 let uploadedFileType = 'txt';
 
-// ── Drop zone wiring (all in JS, no inline handlers) ─────────────────────────
-const dropZone = document.getElementById('drop-zone');
-const fileInp  = document.getElementById('file-inp');
+// -- File input handler (called via onchange inline) ---------------------------
+function handleFileInput(input) {
+  const file = input.files[0];
+  if (file) loadFile(file);
+}
 
-dropZone.addEventListener('click', () => fileInp.click());
-dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+// -- Drag and drop on the zone -------------------------------------------------
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.background = '#E1F5EE'; dropZone.style.borderColor = '#1D9E75'; });
+dropZone.addEventListener('dragleave', () => { dropZone.style.background = '#fafafa'; dropZone.style.borderColor = ''; });
 dropZone.addEventListener('drop', e => {
   e.preventDefault();
-  dropZone.classList.remove('over');
+  dropZone.style.background = '#fafafa'; dropZone.style.borderColor = '';
   const file = e.dataTransfer.files[0];
   if (file) loadFile(file);
 });
-fileInp.addEventListener('change', () => {
-  if (fileInp.files[0]) loadFile(fileInp.files[0]);
-});
 
-// ── Tab wiring ────────────────────────────────────────────────────────────────
+// -- Tab wiring ----------------------------------------------------------------
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -278,11 +279,11 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   });
 });
 
-// ── Analyze button ────────────────────────────────────────────────────────────
+// -- Buttons -------------------------------------------------------------------
 document.getElementById('analyze-btn').addEventListener('click', runAnalysis);
 document.getElementById('reset-btn').addEventListener('click', reset);
 
-// ── File reading ──────────────────────────────────────────────────────────────
+// -- File reading --------------------------------------------------------------
 async function loadFile(file) {
   uploadedFileType = file.name.split('.').pop().toLowerCase();
   const dn = document.getElementById('drop-name');
@@ -311,16 +312,17 @@ async function loadFile(file) {
     document.getElementById('resume-ta').value = txt.trim();
     dn.textContent = '✓ ' + file.name;
     dn.style.color = '#0F6E56';
-    dropZone.classList.add('loaded');
-    document.getElementById('drop-icon').textContent =
-      uploadedFileType === 'pdf' ? '📕' : uploadedFileType === 'docx' ? '📘' : '📄';
+    dn.style.display = 'block';
+    document.getElementById('drop-main').textContent = 'File loaded - change file above';
+    dropZone.style.borderColor = '#1D9E75';
+    dropZone.style.background = '#E1F5EE';
   } catch (e) {
     dn.textContent = '✗ Could not read file: ' + e.message;
     dn.style.color = '#A32D2D';
   }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers -------------------------------------------------------------------
 function setStep(n) {
   [1,2,3].forEach(i => {
     const el = document.getElementById('sp' + i);
@@ -366,23 +368,24 @@ function reset() {
   document.getElementById('inp-err').style.display     = 'none';
   document.getElementById('resume-ta').value = '';
   document.getElementById('jd-ta').value     = '';
-  document.getElementById('drop-name').style.display   = 'none';
-  document.getElementById('drop-icon').textContent = '📄';
-  dropZone.classList.remove('loaded');
-  fileInp.value = '';
+  document.getElementById('drop-name').style.display = 'none';
+  document.getElementById('drop-main').textContent = 'Upload your resume';
+  document.getElementById('file-inp').value = '';
+  dropZone.style.background = '#fafafa';
+  dropZone.style.borderColor = '';
   uploadedFileType = 'txt';
   setStep(1);
   document.querySelectorAll('.tab-btn')[0].click();
 }
 
-// ── Analysis ──────────────────────────────────────────────────────────────────
+// -- Analysis ------------------------------------------------------------------
 async function runAnalysis() {
   const resume = document.getElementById('resume-ta').value.trim();
   const jd     = document.getElementById('jd-ta').value.trim();
   document.getElementById('inp-err').style.display = 'none';
 
   if (!resume)            { showErr('Please upload a resume file or paste your resume text.'); return; }
-  if (resume.length < 80) { showErr('Resume looks too short — please paste the full text.'); return; }
+  if (resume.length < 80) { showErr('Resume looks too short - please paste the full text.'); return; }
   if (!jd)                { showErr('Please paste the job description.'); return; }
 
   document.getElementById('sec-input').style.display = 'none';
@@ -401,7 +404,7 @@ async function runAnalysis() {
   let si = 0;
   const iv = setInterval(() => { if (si < steps.length) setP(...steps[si++]); }, 1800);
 
-  const prompt = `You are an expert resume optimizer and ATS specialist. Analyze the resume against the job description. Return ONLY valid JSON — no markdown fences, no extra text.
+  const prompt = `You are an expert resume optimizer and ATS specialist. Analyze the resume against the job description. Return ONLY valid JSON - no markdown fences, no extra text.
 
 RESUME:
 ${resume.slice(0, 6000)}
@@ -438,16 +441,16 @@ Rules:
 - Exactly 15 keywords from the JD
 - Flag any title mismatch as HIGH severity
 - Keep all original sections in the same order
-- TARGET LENGTH: Fill as close to exactly 2 Word pages as possible — not under, not over. A recruiter wants to see a full, confident resume. Follow these rules:
+- TARGET LENGTH: Fill as close to exactly 2 Word pages as possible - not under, not over. A recruiter wants to see a full, confident resume. Follow these rules:
   * Summary: 3 punchy sentences max
   * Most recent 2 jobs: 4 strong bullets each
   * Jobs 3-5 years ago: 2-3 bullets each
-  * Jobs 5+ years ago: 1-2 bullets each — keep them but be concise
-  * Include ALL jobs from the original resume — never drop a job entry entirely
-  * Use bullet points only — no paragraph-style descriptions
+  * Jobs 5+ years ago: 1-2 bullets each - keep them but be concise
+  * Include ALL jobs from the original resume - never drop a job entry entirely
+  * Use bullet points only - no paragraph-style descriptions
   * Each bullet: one clear achievement, max 120 characters, strong verb, metric where possible
   * List what you shortened in trimmed_content
-- SKILLS SECTION: Rewrite into compact single-line categories formatted as "Category: skill · skill · skill". Keep max 4-5 categories total. Only include skills that are genuinely relevant to this specific JD — do not pad. Add gap skills that fit naturally. Each line max 110 characters. Most relevant category goes first.`;
+- SKILLS SECTION: Rewrite into compact single-line categories formatted as "Category: skill · skill · skill". Keep max 4-5 categories total. Only include skills that are genuinely relevant to this specific JD - do not pad. Add gap skills that fit naturally. Each line max 110 characters. Most relevant category goes first.`;
 
   try {
     const resp = await fetch('/analyze', {
@@ -485,7 +488,7 @@ Rules:
   }
 }
 
-// ── Render ────────────────────────────────────────────────────────────────────
+// -- Render --------------------------------------------------------------------
 function renderResults(d) {
   renderOverview(d); renderBullets(d); renderKeywords(d);
   renderATS(d); renderGaps(d); renderFull(d); renderCoverLetter();
@@ -537,7 +540,7 @@ function renderOverview(d) {
     const cls    = fits ? 'good' : 'warn';
     const icon   = fits ? '✅' : '⚠️';
     const sub    = fits
-      ? 'Fits within 2 pages — ideal length for recruiters.'
+      ? 'Fits within 2 pages - ideal length for recruiters.'
       : 'Exceeds 2 pages. The downloaded file will be automatically trimmed to 2 pages.';
     document.getElementById('page-banner').innerHTML = `
       <div class="page-banner ${cls}" style="margin-top:12px;">
@@ -634,7 +637,7 @@ function renderFull(d) {
     </div>
     ${phCount ? `<div style="background:#FAEEDA;border:1px solid #FAC775;border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:12px;line-height:1.6;color:#7A4E0A;">
       <strong>⚠️ `+phCount+` gap placeholder`+(phCount>1?'s are':' is')+` highlighted in amber.</strong>
-      These are preparation guides — fill them in as you gain the experience, then remove the [PLACEHOLDER: ] wrapper before submitting your resume.
+      These are preparation guides - fill them in as you gain the experience, then remove the [PLACEHOLDER: ] wrapper before submitting your resume.
     </div>` : ''}
     <div class="resume-pre" id="opt-pre">${highlighted}</div>
     <div class="btn-row" style="margin-top:10px;">
@@ -659,7 +662,7 @@ async function downloadFormatted() {
   const errEl = document.getElementById('dl-err');
   errEl.style.display = 'none';
 
-  // Strip placeholder markers for the download — leave the example text as a reminder
+  // Strip placeholder markers for the download - leave the example text as a reminder
   const cleanText = text.replace(/\[PLACEHOLDER:\s*/g, '[TODO: ').replace(/\]/g, ']');
 
   if (fmt === 'txt') {
@@ -685,7 +688,7 @@ async function downloadFormatted() {
   }
 }
 
-// ── Cover Letter ─────────────────────────────────────────────────────────────
+// -- Cover Letter -------------------------------------------------------------
 function renderCoverLetter() {
   document.getElementById('tab-cover').innerHTML = `
     <div class="sec-title">Cover Letter Generator</div>
@@ -745,7 +748,7 @@ function renderCoverLetter() {
         </div>
       </div>
       <pre id="cl-text" style="font-family:var(--mono);font-size:12px;line-height:1.85;white-space:pre-wrap;color:var(--text);background:#fafaf9;border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.5rem;max-height:540px;overflow-y:auto;margin-bottom:8px;"></pre>
-      <p style="font-size:11px;color:var(--text-muted);font-family:var(--mono);">Tip: personalize before sending — add a specific detail about the company that shows you did your research.</p>
+      <p style="font-size:11px;color:var(--text-muted);font-family:var(--mono);">Tip: personalize before sending - add a specific detail about the company that shows you did your research.</p>
     </div>
 
     <div id="cl-err" style="display:none;padding:10px 14px;background:var(--danger-light);border:1px solid #F09595;border-radius:var(--radius);font-size:13px;color:var(--danger);font-family:var(--mono);"></div>
@@ -765,8 +768,7 @@ async function generateCoverLetter() {
   if (!company) { errEl.textContent = 'Please enter the company name.'; errEl.style.display = 'block'; return; }
 
   const resumeText = _vaultData && _vaultData.optimized_resume
-    ? _vaultData.optimized_resume.replace(/\n/g, '
-')
+    ? _vaultData.optimized_resume.replace(/\\n/g, '\n')
     : document.getElementById('resume-ta') ? document.getElementById('resume-ta').value : '';
 
   const jd = document.getElementById('jd-ta') ? document.getElementById('jd-ta').value : '';
@@ -778,11 +780,11 @@ async function generateCoverLetter() {
   const toneMap = {
     professional:  'professional, confident, and polished',
     enthusiastic:  'enthusiastic, warm, and genuine',
-    concise:       'concise, direct, and to the point — no fluff',
+    concise:       'concise, direct, and to the point - no fluff',
     executive:     'executive, strategic, and leadership-focused'
   };
 
-  const prompt = `Write a compelling cover letter for a job application. Return ONLY the cover letter text — no explanation, no subject line, no markdown.
+  const prompt = `Write a compelling cover letter for a job application. Return ONLY the cover letter text - no explanation, no subject line, no markdown.
 
 CANDIDATE RESUME:
 ${resumeText.slice(0, 4000)}
@@ -854,7 +856,7 @@ function downloadCoverLetter() {
   a.click();
 }
 
-// ── Vault ─────────────────────────────────────────────────────────────────────
+// -- Vault ---------------------------------------------------------------------
 let _vaultData = null; // store analysis data for vault save
 
 function showSaveVaultModal() {

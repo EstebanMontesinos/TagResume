@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Resume Optimizer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -10,455 +10,177 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --accent: #1D9E75;
-      --accent-light: #E1F5EE;
-      --accent-mid: #0F6E56;
-      --warn: #BA7517;
-      --warn-light: #FAEEDA;
-      --danger: #A32D2D;
-      --danger-light: #FCEBEB;
-      --info: #185FA5;
-      --info-light: #E6F1FB;
-      --bg: #f9f9f8;
-      --surface: #ffffff;
-      --border: rgba(0,0,0,0.12);
-      --border-strong: rgba(0,0,0,0.22);
-      --text: #1a1a1a;
-      --text-muted: #6b6b6b;
-      --radius: 10px;
-      --radius-lg: 14px;
-      --sans: 'DM Sans', system-ui, sans-serif;
-      --mono: 'DM Mono', monospace;
-      --serif: 'Instrument Serif', Georgia, serif;
+      --accent:#1D9E75; --accent-light:#E1F5EE; --accent-mid:#0F6E56;
+      --warn:#BA7517; --warn-light:#FAEEDA;
+      --danger:#A32D2D; --danger-light:#FCEBEB;
+      --info:#185FA5; --info-light:#E6F1FB;
+      --bg:#f9f9f8; --surface:#ffffff;
+      --border:rgba(0,0,0,0.12); --border-strong:rgba(0,0,0,0.22);
+      --text:#1a1a1a; --text-muted:#6b6b6b;
+      --radius:10px; --radius-lg:14px;
+      --sans:'DM Sans',system-ui,sans-serif;
+      --mono:'DM Mono',monospace;
+      --serif:'Instrument Serif',Georgia,serif;
     }
+    body { font-family:var(--sans); background:var(--bg); color:var(--text); min-height:100vh; }
+    .shell { max-width:920px; margin:0 auto; padding:2.5rem 1.5rem 4rem; }
 
-    body {
-      font-family: var(--sans);
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-    }
+    /* Header */
+    .header { display:flex; align-items:baseline; gap:14px; margin-bottom:2rem; padding-bottom:1.5rem; border-bottom:1px solid var(--border); }
+    .header h1 { font-family:var(--serif); font-size:30px; font-weight:400; }
+    .header h1 em { color:var(--accent); font-style:italic; }
+    .header-sub { font-family:var(--mono); font-size:12px; color:var(--text-muted); }
 
-    /* ── Layout ── */
-    .shell {
-      max-width: 920px;
-      margin: 0 auto;
-      padding: 2.5rem 1.5rem 4rem;
-    }
+    /* Steps */
+    .steps { display:flex; gap:8px; align-items:center; margin-bottom:1.75rem; }
+    .step-pill { font-family:var(--mono); font-size:11px; padding:3px 12px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--text-muted); }
+    .step-pill.active { background:var(--accent-light); color:var(--accent-mid); border-color:#9FE1CB; }
+    .step-pill.done   { background:var(--accent); color:white; border-color:var(--accent); }
+    .step-arrow { font-size:11px; color:var(--text-muted); }
 
-    /* ── Header ── */
-    .header {
-      display: flex;
-      align-items: baseline;
-      gap: 14px;
-      margin-bottom: 2rem;
-      padding-bottom: 1.5rem;
-      border-bottom: 1px solid var(--border);
-    }
-    .header h1 {
-      font-family: var(--serif);
-      font-size: 30px;
-      font-weight: 400;
-      color: var(--text);
-    }
-    .header h1 em { color: var(--accent); font-style: italic; }
-    .header-sub {
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--text-muted);
-    }
+    /* Upload */
+    .upload-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+    @media(max-width:620px){ .upload-grid{ grid-template-columns:1fr; } }
+    .field-label { display:block; font-size:11px; font-weight:500; font-family:var(--mono); text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:8px; }
 
-    /* ── Steps ── */
-    .steps {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      margin-bottom: 1.75rem;
-    }
-    .step-pill {
-      font-family: var(--mono);
-      font-size: 11px;
-      padding: 3px 12px;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text-muted);
-    }
-    .step-pill.active { background: var(--accent-light); color: var(--accent-mid); border-color: #9FE1CB; }
-    .step-pill.done   { background: var(--accent); color: white; border-color: var(--accent); }
-    .step-arrow { font-size: 11px; color: var(--text-muted); }
+    .drop-zone { border:1.5px dashed var(--border-strong); border-radius:var(--radius); padding:20px 16px; text-align:center; cursor:pointer; background:#fafafa; transition:all 0.15s; margin-bottom:8px; user-select:none; }
+    .drop-zone:hover { border-color:var(--accent); background:var(--accent-light); }
+    .drop-zone.over   { border-color:var(--accent); background:var(--accent-light); }
+    .drop-zone.loaded { border-style:solid; border-color:var(--accent); background:var(--accent-light); }
+    .drop-icon { font-size:26px; margin-bottom:6px; }
+    .drop-main { font-size:13px; font-weight:500; margin-bottom:3px; }
+    .drop-sub  { font-size:11px; font-family:var(--mono); color:var(--text-muted); }
+    .drop-name { font-size:12px; font-family:var(--mono); font-weight:500; margin-top:8px; display:none; }
+    .divider-text { font-size:11px; font-family:var(--mono); color:var(--text-muted); text-align:center; margin-bottom:6px; }
 
-    /* ── Upload grid ── */
-    .upload-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 16px;
-    }
-    @media (max-width: 620px) { .upload-grid { grid-template-columns: 1fr; } }
+    textarea { width:100%; resize:vertical; font-family:var(--mono); font-size:12.5px; line-height:1.7; padding:12px 14px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); transition:border-color 0.15s; }
+    textarea:focus { outline:none; border-color:var(--accent); }
 
-    .field-label {
-      display: block;
-      font-size: 11px;
-      font-weight: 500;
-      font-family: var(--mono);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--text-muted);
-      margin-bottom: 8px;
-    }
+    /* Buttons */
+    .btn-primary { width:100%; padding:14px; background:var(--accent); color:white; border:none; border-radius:var(--radius); font-size:15px; font-weight:500; font-family:var(--sans); cursor:pointer; transition:background 0.15s; margin-top:4px; }
+    .btn-primary:hover { background:var(--accent-mid); }
+    .btn-secondary { padding:9px 16px; background:var(--surface); color:var(--text); border:1px solid var(--border-strong); border-radius:var(--radius); font-size:13px; font-family:var(--sans); cursor:pointer; }
+    .btn-secondary:hover { background:#f0f0ef; }
+    .btn-accent { padding:9px 16px; background:var(--accent); color:white; border:none; border-radius:var(--radius); font-size:13px; font-family:var(--sans); cursor:pointer; }
+    .btn-accent:hover { background:var(--accent-mid); }
+    .btn-accent:disabled { opacity:0.5; cursor:not-allowed; }
 
-    /* Drop zone */
-    .drop-zone {
-      border: 1.5px dashed var(--border-strong);
-      border-radius: var(--radius);
-      padding: 20px 16px;
-      text-align: center;
-      cursor: pointer;
-      background: #fafafa;
-      transition: all 0.15s;
-      margin-bottom: 8px;
-      user-select: none;
-    }
-    .drop-zone:hover, .drop-zone.over { border-color: var(--accent); background: var(--accent-light); }
-    .drop-zone.loaded { border-style: solid; border-color: var(--accent); background: var(--accent-light); }
-    .drop-icon { font-size: 26px; margin-bottom: 6px; }
-    .drop-main { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
-    .drop-sub  { font-size: 11px; font-family: var(--mono); color: var(--text-muted); }
-    .drop-name { font-size: 12px; font-family: var(--mono); color: var(--accent-mid); font-weight: 500; margin-top: 8px; display: none; }
+    .error-box { display:none; padding:11px 14px; background:var(--danger-light); border:1px solid #F09595; border-radius:var(--radius); font-size:13px; color:var(--danger); font-family:var(--mono); margin-bottom:12px; }
 
-    .divider-text {
-      font-size: 11px;
-      font-family: var(--mono);
-      color: var(--text-muted);
-      text-align: center;
-      margin-bottom: 6px;
-    }
+    /* Loading */
+    #sec-load { display:none; margin-top:2.5rem; }
+    .progress-track { width:100%; height:3px; background:#e5e5e3; border-radius:2px; overflow:hidden; margin-bottom:14px; }
+    .progress-bar { height:100%; background:var(--accent); border-radius:2px; width:5%; transition:width 0.7s ease; }
+    .progress-text { font-family:var(--mono); font-size:12px; color:var(--text-muted); text-align:center; }
 
-    textarea {
-      width: 100%;
-      resize: vertical;
-      font-family: var(--mono);
-      font-size: 12.5px;
-      line-height: 1.7;
-      padding: 12px 14px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--surface);
-      color: var(--text);
-      transition: border-color 0.15s;
-    }
-    textarea:focus { outline: none; border-color: var(--accent); }
+    /* Results */
+    #sec-results { display:none; }
+    .tab-row { display:flex; gap:2px; border-bottom:1px solid var(--border); margin-bottom:1.75rem; overflow-x:auto; }
+    .tab-btn { padding:9px 16px; font-size:13px; font-weight:500; color:var(--text-muted); border-bottom:2px solid transparent; cursor:pointer; white-space:nowrap; background:none; border-top:none; border-left:none; border-right:none; font-family:var(--sans); }
+    .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+    .tab-panel { display:none; }
+    .tab-panel.active { display:block; }
 
-    /* ── Buttons ── */
-    .btn-primary {
-      width: 100%;
-      padding: 14px;
-      background: var(--accent);
-      color: white;
-      border: none;
-      border-radius: var(--radius);
-      font-size: 15px;
-      font-weight: 500;
-      font-family: var(--sans);
-      cursor: pointer;
-      transition: background 0.15s;
-      margin-top: 4px;
-    }
-    .btn-primary:hover { background: var(--accent-mid); }
-    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+    /* Score cards */
+    .score-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:1.5rem; }
+    @media(max-width:500px){ .score-grid{ grid-template-columns:repeat(2,1fr); } }
+    .score-card { background:#f4f4f2; border-radius:var(--radius); padding:14px; text-align:center; }
+    .score-num { font-size:30px; font-weight:500; line-height:1; margin-bottom:5px; }
+    .score-lbl { font-size:11px; font-family:var(--mono); color:var(--text-muted); }
+    .c-green { color:var(--accent); } .c-amber { color:var(--warn); } .c-red { color:var(--danger); }
 
-    .btn-secondary {
-      padding: 9px 16px;
-      background: var(--surface);
-      color: var(--text);
-      border: 1px solid var(--border-strong);
-      border-radius: var(--radius);
-      font-size: 13px;
-      font-family: var(--sans);
-      cursor: pointer;
-      transition: background 0.12s;
-    }
-    .btn-secondary:hover { background: #f0f0ef; }
+    .sec-title { font-size:14px; font-weight:500; color:var(--text); margin-bottom:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .badge { display:inline-block; font-size:10px; font-family:var(--mono); font-weight:500; padding:2px 8px; border-radius:20px; }
+    .badge-green { background:var(--accent-light); color:var(--accent-mid); }
+    .badge-amber { background:var(--warn-light); color:var(--warn); }
+    .badge-red   { background:var(--danger-light); color:var(--danger); }
+    .badge-blue  { background:var(--info-light); color:var(--info); }
 
-    .btn-accent {
-      padding: 9px 16px;
-      background: var(--accent);
-      color: white;
-      border: none;
-      border-radius: var(--radius);
-      font-size: 13px;
-      font-family: var(--sans);
-      cursor: pointer;
-      transition: background 0.12s;
-    }
-    .btn-accent:hover { background: var(--accent-mid); }
+    .assessment-box { background:#f4f4f2; border-radius:var(--radius); padding:14px 16px; margin-bottom:1.25rem; }
+    .assessment-box .mini-lbl { font-size:10px; font-family:var(--mono); color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em; }
+    .assessment-box p { font-size:13.5px; line-height:1.7; }
 
-    /* ── Error ── */
-    .error-box {
-      display: none;
-      padding: 11px 14px;
-      background: var(--danger-light);
-      border: 1px solid #F09595;
-      border-radius: var(--radius);
-      font-size: 13px;
-      color: var(--danger);
-      font-family: var(--mono);
-      margin-bottom: 12px;
-    }
+    .metrics-box { background:var(--warn-light); border:1px solid #FAC775; border-radius:var(--radius); padding:13px 15px; margin-bottom:1.25rem; }
+    .metrics-box .mtitle { font-size:13px; font-weight:500; color:var(--warn); margin-bottom:6px; }
+    .metrics-box ul { padding-left:18px; }
+    .metrics-box li { font-size:12px; font-family:var(--mono); color:var(--warn); margin-bottom:4px; line-height:1.5; }
 
-    /* ── Loading ── */
-    #sec-load { display: none; margin-top: 2.5rem; }
-    .progress-track {
-      width: 100%;
-      height: 3px;
-      background: #e5e5e3;
-      border-radius: 2px;
-      overflow: hidden;
-      margin-bottom: 14px;
-    }
-    .progress-bar {
-      height: 100%;
-      background: var(--accent);
-      border-radius: 2px;
-      width: 5%;
-      transition: width 0.7s ease;
-    }
-    .progress-text {
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--text-muted);
-      text-align: center;
-    }
+    .mini-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px; }
+    .mini-stat { padding:11px 13px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); }
+    .mini-stat .ms-lbl { font-size:10px; font-family:var(--mono); color:var(--text-muted); margin-bottom:3px; }
+    .mini-stat .ms-val { font-size:22px; font-weight:500; }
 
-    /* ── Results ── */
-    #sec-results { display: none; }
+    /* Bullets */
+    .bullet-card { border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:12px; }
+    .b-before { padding:11px 14px; background:#fff5f5; font-size:13px; color:#555; line-height:1.55; border-bottom:1px solid var(--border); }
+    .b-section { font-size:10px; font-family:var(--mono); color:var(--text-muted); display:block; margin-bottom:5px; }
+    .b-after { padding:11px 14px; background:#f0faf5; font-size:13px; color:var(--text); line-height:1.55; }
 
-    .tab-row {
-      display: flex;
-      gap: 2px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 1.75rem;
-      overflow-x: auto;
-    }
-    .tab-btn {
-      padding: 9px 16px;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-muted);
-      border-bottom: 2px solid transparent;
-      cursor: pointer;
-      white-space: nowrap;
-      background: none;
-      border-top: none; border-left: none; border-right: none;
-      font-family: var(--sans);
-      transition: color 0.1s;
-    }
-    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
+    /* Keywords */
+    .kw-wrap { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:1.25rem; }
+    .kw { padding:4px 11px; border-radius:20px; font-size:12px; font-family:var(--mono); border:1px solid; }
+    .kw-ok { background:var(--accent-light); color:var(--accent-mid); border-color:#9FE1CB; }
+    .kw-no { background:var(--danger-light); color:var(--danger); border-color:#F09595; }
+    .kw-split { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @media(max-width:500px){ .kw-split{ grid-template-columns:1fr; } }
 
-    /* ── Score cards ── */
-    .score-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin-bottom: 1.5rem;
-    }
-    @media (max-width: 500px) { .score-grid { grid-template-columns: repeat(2,1fr); } }
-    .score-card {
-      background: #f4f4f2;
-      border-radius: var(--radius);
-      padding: 14px;
-      text-align: center;
-    }
-    .score-num { font-size: 30px; font-weight: 500; line-height: 1; margin-bottom: 5px; }
-    .score-lbl { font-size: 11px; font-family: var(--mono); color: var(--text-muted); }
-    .c-green { color: var(--accent); }
-    .c-amber { color: var(--warn); }
-    .c-red   { color: var(--danger); }
+    /* ATS */
+    .iss-item { display:flex; gap:12px; padding:11px 14px; border:1px solid var(--border); border-radius:var(--radius); margin-bottom:8px; background:var(--surface); align-items:flex-start; }
+    .iss-icon { font-size:15px; flex-shrink:0; margin-top:1px; }
+    .iss-cat  { font-size:10px; font-family:var(--mono); color:var(--text-muted); margin-bottom:3px; }
+    .iss-desc { font-size:13px; line-height:1.5; margin-bottom:4px; }
+    .iss-fix  { font-size:12px; font-family:var(--mono); color:var(--accent-mid); }
 
-    /* ── Section title ── */
-    .sec-title {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text);
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
+    /* Gaps */
+    .gap-item { padding:13px 15px; border:1px solid var(--border); border-left:3px solid var(--warn); border-radius:var(--radius); margin-bottom:8px; background:var(--surface); }
+    .gap-header { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+    .gap-skill { font-size:13px; font-weight:500; }
+    .gap-sug { font-size:12px; color:var(--text-muted); line-height:1.5; }
 
-    /* ── Badges ── */
-    .badge {
-      display: inline-block;
-      font-size: 10px;
-      font-family: var(--mono);
-      font-weight: 500;
-      padding: 2px 8px;
-      border-radius: 20px;
-    }
-    .badge-green  { background: var(--accent-light); color: var(--accent-mid); }
-    .badge-amber  { background: var(--warn-light); color: var(--warn); }
-    .badge-red    { background: var(--danger-light); color: var(--danger); }
-    .badge-blue   { background: var(--info-light); color: var(--info); }
+    /* Full resume */
+    .resume-pre { font-family:var(--mono); font-size:12px; line-height:1.85; white-space:pre-wrap; color:var(--text); background:#fafaf9; border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem 1.5rem; max-height:540px; overflow-y:auto; margin-bottom:10px; }
+    .btn-row { display:flex; gap:8px; flex-wrap:wrap; }
+    .reset-row { margin-top:2rem; padding-top:1.5rem; border-top:1px solid var(--border); }
 
-    /* ── Assessment box ── */
-    .assessment-box {
-      background: #f4f4f2;
-      border-radius: var(--radius);
-      padding: 14px 16px;
-      margin-bottom: 1.25rem;
-    }
-    .assessment-box .mini-lbl {
-      font-size: 10px;
-      font-family: var(--mono);
-      color: var(--text-muted);
-      margin-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .assessment-box p { font-size: 13.5px; line-height: 1.7; }
-
-    /* ── Metrics prompt ── */
-    .metrics-box {
-      background: var(--warn-light);
-      border: 1px solid #FAC775;
-      border-radius: var(--radius);
-      padding: 13px 15px;
-      margin-bottom: 1.25rem;
-    }
-    .metrics-box .mtitle { font-size: 13px; font-weight: 500; color: var(--warn); margin-bottom: 6px; }
-    .metrics-box ul { padding-left: 18px; }
-    .metrics-box li { font-size: 12px; font-family: var(--mono); color: var(--warn); margin-bottom: 4px; line-height: 1.5; }
-
-    /* ── Mini stat row ── */
-    .mini-stats {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-    }
-    .mini-stat {
-      padding: 11px 13px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--surface);
-    }
-    .mini-stat .ms-lbl { font-size: 10px; font-family: var(--mono); color: var(--text-muted); margin-bottom: 3px; }
-    .mini-stat .ms-val { font-size: 22px; font-weight: 500; }
-
-    /* ── Bullet cards ── */
-    .bullet-card {
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      margin-bottom: 12px;
-    }
-    .b-before {
-      padding: 11px 14px;
-      background: #fff5f5;
-      font-size: 13px;
-      color: #555;
-      line-height: 1.55;
-      border-bottom: 1px solid var(--border);
-    }
-    .b-section {
-      font-size: 10px;
-      font-family: var(--mono);
-      color: var(--text-muted);
-      display: block;
-      margin-bottom: 5px;
-    }
-    .b-after {
-      padding: 11px 14px;
-      background: #f0faf5;
-      font-size: 13px;
-      color: var(--text);
-      line-height: 1.55;
-    }
-
-    /* ── Keywords ── */
-    .kw-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 1.25rem; }
-    .kw {
-      padding: 4px 11px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-family: var(--mono);
-      border: 1px solid;
-    }
-    .kw-ok { background: var(--accent-light); color: var(--accent-mid); border-color: #9FE1CB; }
-    .kw-no { background: var(--danger-light); color: var(--danger); border-color: #F09595; }
-
-    .kw-split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    @media (max-width: 500px) { .kw-split { grid-template-columns: 1fr; } }
-
-    /* ── ATS issues ── */
-    .iss-item {
-      display: flex;
-      gap: 12px;
-      padding: 11px 14px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      margin-bottom: 8px;
-      background: var(--surface);
-      align-items: flex-start;
-    }
-    .iss-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
-    .iss-cat { font-size: 10px; font-family: var(--mono); color: var(--text-muted); margin-bottom: 3px; }
-    .iss-desc { font-size: 13px; line-height: 1.5; margin-bottom: 4px; }
-    .iss-fix { font-size: 12px; font-family: var(--mono); color: var(--accent-mid); }
-
-    /* ── Gaps ── */
-    .gap-item {
-      padding: 13px 15px;
-      border: 1px solid var(--border);
-      border-left: 3px solid var(--warn);
-      border-radius: var(--radius);
-      margin-bottom: 8px;
-      background: var(--surface);
-    }
-    .gap-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-    .gap-skill { font-size: 13px; font-weight: 500; }
-    .gap-sug { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
-
-    /* ── Full resume ── */
-    .resume-pre {
-      font-family: var(--mono);
-      font-size: 12px;
-      line-height: 1.85;
+    /* Gap placeholders */
+    .ph-mark {
+      background: #FEF3C7;
+      border: 1px solid #F59E0B;
+      border-radius: 4px;
+      color: #92400E;
+      font-style: italic;
+      padding: 1px 4px;
       white-space: pre-wrap;
-      color: var(--text);
-      background: #fafaf9;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.25rem 1.5rem;
-      max-height: 540px;
-      overflow-y: auto;
-      margin-bottom: 10px;
     }
-    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
-    /* ── Reset row ── */
-    .reset-row {
-      margin-top: 2rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid var(--border);
-    }
+    /* Page count banner */
+    .page-banner { border-radius:var(--radius); padding:11px 14px; display:flex; align-items:center; gap:10px; margin-top:12px; }
+    .page-banner.good { background:var(--accent-light); border:1px solid #9FE1CB; }
+    .page-banner.warn { background:var(--warn-light); border:1px solid #FAC775; }
+    .page-banner .pb-icon { font-size:18px; }
+    .page-banner .pb-title { font-size:12px; font-weight:500; margin-bottom:2px; }
+    .page-banner.good .pb-title { color:var(--accent-mid); }
+    .page-banner.warn .pb-title { color:var(--warn); }
+    .page-banner .pb-sub { font-size:12px; }
+    .page-banner.good .pb-sub { color:var(--accent-mid); }
+    .page-banner.warn .pb-sub { color:var(--warn); }
+
+    .trimmed-box { margin-top:10px; background:#f4f4f2; border-radius:var(--radius); padding:11px 14px; }
+    .trimmed-box .t-lbl { font-size:10px; font-family:var(--mono); color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
+    .trimmed-box ul { padding-left:16px; }
+    .trimmed-box li { font-size:12px; color:var(--text-muted); margin-bottom:3px; }
   </style>
 </head>
 <body>
 <div class="shell">
 
-  <!-- HEADER -->
   <div class="header">
     <h1>Resume <em>Optimizer</em></h1>
-    <span class="header-sub">ATS-ready · Achievement-focused · Format-preserved</span>
+    <span class="header-sub">ATS-ready · Achievement-focused · 2-page target</span>
+    <a href="/vault.html" style="margin-left:auto;padding:7px 14px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);font-size:12px;font-family:var(--mono);color:var(--text);text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;">🗄️ My Vault</a>
   </div>
 
-  <!-- STEPS -->
   <div class="steps">
     <span class="step-pill active" id="sp1">1 · Upload</span>
     <span class="step-arrow">→</span>
@@ -467,38 +189,28 @@
     <span class="step-pill" id="sp3">3 · Results</span>
   </div>
 
-  <!-- INPUT SECTION -->
+  <!-- INPUT -->
   <div id="sec-input">
     <div class="upload-grid">
-
-      <!-- Resume -->
       <div>
         <span class="field-label">Resume</span>
-        <div class="drop-zone" id="drop-zone"
-          onclick="document.getElementById('file-inp').click()"
-          ondragover="event.preventDefault();this.classList.add('over')"
-          ondragleave="this.classList.remove('over')"
-          ondrop="event.preventDefault();this.classList.remove('over');loadFile(event.dataTransfer.files[0])">
+        <div class="drop-zone" id="drop-zone">
           <div class="drop-icon" id="drop-icon">📄</div>
           <div class="drop-main">Click to upload resume</div>
           <div class="drop-sub">PDF · DOCX · TXT — or drag &amp; drop</div>
           <div class="drop-name" id="drop-name"></div>
         </div>
-        <input type="file" id="file-inp" accept=".pdf,.docx,.txt" style="display:none" onchange="loadFile(this.files[0])">
+        <input type="file" id="file-inp" accept=".pdf,.docx,.txt" style="display:none">
         <div class="divider-text">— or paste below —</div>
         <textarea id="resume-ta" rows="9" placeholder="Paste resume text here..."></textarea>
       </div>
-
-      <!-- JD -->
       <div>
         <span class="field-label">Job Description</span>
-        <textarea id="jd-ta" rows="18" placeholder="Paste the full job description here — responsibilities, requirements, qualifications, tech stack..."></textarea>
+        <textarea id="jd-ta" rows="18" placeholder="Paste the full job description here..."></textarea>
       </div>
-
     </div>
-
     <div class="error-box" id="inp-err"></div>
-    <button class="btn-primary" onclick="runAnalysis()">Analyze &amp; Optimize Resume →</button>
+    <button class="btn-primary" id="analyze-btn">Analyze &amp; Optimize Resume →</button>
   </div>
 
   <!-- LOADING -->
@@ -510,146 +222,186 @@
   <!-- RESULTS -->
   <div id="sec-results">
     <div class="tab-row">
-      <button class="tab-btn active" onclick="switchTab('overview', this)">Overview</button>
-      <button class="tab-btn" onclick="switchTab('bullets', this)">Rewritten Bullets</button>
-      <button class="tab-btn" onclick="switchTab('keywords', this)">Keywords</button>
-      <button class="tab-btn" onclick="switchTab('ats', this)">ATS Checks</button>
-      <button class="tab-btn" onclick="switchTab('gaps', this)">Gap Analysis</button>
-      <button class="tab-btn" onclick="switchTab('full', this)">Full Resume</button>
+      <button class="tab-btn active" data-tab="overview">Overview</button>
+      <button class="tab-btn" data-tab="bullets">Rewritten Bullets</button>
+      <button class="tab-btn" data-tab="keywords">Keywords</button>
+      <button class="tab-btn" data-tab="ats">ATS Checks</button>
+      <button class="tab-btn" data-tab="gaps">Gap Analysis</button>
+      <button class="tab-btn" data-tab="full">Full Resume</button>
+      <button class="tab-btn" data-tab="cover">✉️ Cover Letter</button>
     </div>
-
     <div id="tab-overview" class="tab-panel active"></div>
     <div id="tab-bullets"  class="tab-panel"></div>
     <div id="tab-keywords" class="tab-panel"></div>
     <div id="tab-ats"      class="tab-panel"></div>
     <div id="tab-gaps"     class="tab-panel"></div>
     <div id="tab-full"     class="tab-panel"></div>
-
+    <div id="tab-cover"    class="tab-panel"></div>
     <div class="reset-row">
-      <button class="btn-secondary" onclick="reset()">← Analyze Another Resume</button>
+      <button class="btn-secondary" id="reset-btn">← Analyze Another Resume</button>
     </div>
   </div>
 
-</div><!-- /shell -->
+</div>
 
 <script>
-  // ── PDF.js worker ────────────────────────────────────────────────────────
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+// ── Init ─────────────────────────────────────────────────────────────────────
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-  // ── File reading ─────────────────────────────────────────────────────────
-  async function loadFile(file) {
-    if (!file) return;
-    const ext = file.name.split('.').pop().toLowerCase();
-    const dn  = document.getElementById('drop-name');
-    const dz  = document.getElementById('drop-zone');
-    dn.textContent = '⏳ Reading ' + file.name + '...';
-    dn.style.display = 'block';
-    dn.style.color = '#BA7517';
-    try {
-      let txt = '';
-      if (ext === 'txt') {
-        txt = await file.text();
-      } else if (ext === 'docx') {
-        const r = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
-        txt = r.value;
-      } else if (ext === 'pdf') {
-        const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page    = await pdf.getPage(i);
-          const content = await page.getTextContent();
-          txt += content.items.map(x => x.str).join(' ') + '\n';
-        }
-      } else {
-        txt = await file.text();
-      }
-      document.getElementById('resume-ta').value = txt.trim();
-      dn.textContent = '✓ ' + file.name;
-      dn.style.color = '#0F6E56';
-      dz.classList.add('loaded');
-      document.getElementById('drop-icon').textContent =
-        ext === 'pdf' ? '📕' : ext === 'docx' ? '📘' : '📄';
-    } catch (e) {
-      dn.textContent = '✗ ' + e.message;
-      dn.style.color = '#A32D2D';
-    }
-  }
+let uploadedFileType = 'txt';
 
-  // ── Step indicator ───────────────────────────────────────────────────────
-  function setStep(n) {
-    [1,2,3].forEach(i => {
-      const el = document.getElementById('sp' + i);
-      el.className = 'step-pill' + (i < n ? ' done' : i === n ? ' active' : '');
-    });
-  }
+// ── Drop zone wiring (all in JS, no inline handlers) ─────────────────────────
+const dropZone = document.getElementById('drop-zone');
+const fileInp  = document.getElementById('file-inp');
 
-  // ── Tab switching ────────────────────────────────────────────────────────
-  function switchTab(name, btn) {
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+dropZone.addEventListener('click', () => fileInp.click());
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('over');
+  const file = e.dataTransfer.files[0];
+  if (file) loadFile(file);
+});
+fileInp.addEventListener('change', () => {
+  if (fileInp.files[0]) loadFile(fileInp.files[0]);
+});
+
+// ── Tab wiring ────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('tab-' + name).classList.add('active');
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Analyze button ────────────────────────────────────────────────────────────
+document.getElementById('analyze-btn').addEventListener('click', runAnalysis);
+document.getElementById('reset-btn').addEventListener('click', reset);
+
+// ── File reading ──────────────────────────────────────────────────────────────
+async function loadFile(file) {
+  uploadedFileType = file.name.split('.').pop().toLowerCase();
+  const dn = document.getElementById('drop-name');
+  dn.textContent = '⏳ Reading ' + file.name + '...';
+  dn.style.color = '#BA7517';
+  dn.style.display = 'block';
+
+  try {
+    let txt = '';
+    if (uploadedFileType === 'txt') {
+      txt = await file.text();
+    } else if (uploadedFileType === 'docx') {
+      const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+      txt = result.value;
+    } else if (uploadedFileType === 'pdf') {
+      const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page    = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        txt += content.items.map(x => x.str).join(' ') + '\n';
+      }
+    } else {
+      txt = await file.text();
+    }
+
+    document.getElementById('resume-ta').value = txt.trim();
+    dn.textContent = '✓ ' + file.name;
+    dn.style.color = '#0F6E56';
+    dropZone.classList.add('loaded');
+    document.getElementById('drop-icon').textContent =
+      uploadedFileType === 'pdf' ? '📕' : uploadedFileType === 'docx' ? '📘' : '📄';
+  } catch (e) {
+    dn.textContent = '✗ Could not read file: ' + e.message;
+    dn.style.color = '#A32D2D';
   }
+}
 
-  // ── Reset ────────────────────────────────────────────────────────────────
-  function reset() {
-    document.getElementById('sec-input').style.display   = 'block';
-    document.getElementById('sec-results').style.display = 'none';
-    document.getElementById('sec-load').style.display    = 'none';
-    document.getElementById('inp-err').style.display     = 'none';
-    document.getElementById('resume-ta').value = '';
-    document.getElementById('jd-ta').value     = '';
-    document.getElementById('drop-name').style.display   = 'none';
-    document.getElementById('drop-zone').classList.remove('loaded');
-    document.getElementById('drop-icon').textContent = '📄';
-    document.getElementById('file-inp').value = '';
-    setStep(1);
-    // reset tab to overview
-    document.querySelectorAll('.tab-btn')[0].click();
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function setStep(n) {
+  [1,2,3].forEach(i => {
+    const el = document.getElementById('sp' + i);
+    el.className = 'step-pill' + (i < n ? ' done' : i === n ? ' active' : '');
+  });
+}
+
+function setP(pct, msg) {
+  document.getElementById('prog-bar').style.width = pct + '%';
+  document.getElementById('prog-txt').textContent  = msg;
+}
+
+function showErr(msg) {
+  const el = document.getElementById('inp-err');
+  el.textContent   = msg;
+  el.style.display = 'block';
+}
+
+function sc(n) { return n >= 75 ? 'c-green' : n >= 50 ? 'c-amber' : 'c-red'; }
+
+function sanitizeJSON(str) {
+  let result = '', inString = false, escaped = false;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (escaped)    { result += ch; escaped = false; continue; }
+    if (ch === '\\') { result += ch; escaped = true;  continue; }
+    if (ch === '"')  { inString = !inString; result += ch; continue; }
+    if (inString) {
+      if (ch === '\n') { result += '\\n'; continue; }
+      if (ch === '\r') { result += '\\r'; continue; }
+      if (ch === '\t') { result += '\\t'; continue; }
+      if (ch.charCodeAt(0) < 32) { result += ' '; continue; }
+    }
+    result += ch;
   }
+  return result;
+}
 
-  // ── Progress ─────────────────────────────────────────────────────────────
-  function setP(pct, msg) {
-    document.getElementById('prog-bar').style.width = pct + '%';
-    document.getElementById('prog-txt').textContent  = msg;
-  }
+function reset() {
+  document.getElementById('sec-input').style.display   = 'block';
+  document.getElementById('sec-results').style.display = 'none';
+  document.getElementById('sec-load').style.display    = 'none';
+  document.getElementById('inp-err').style.display     = 'none';
+  document.getElementById('resume-ta').value = '';
+  document.getElementById('jd-ta').value     = '';
+  document.getElementById('drop-name').style.display   = 'none';
+  document.getElementById('drop-icon').textContent = '📄';
+  dropZone.classList.remove('loaded');
+  fileInp.value = '';
+  uploadedFileType = 'txt';
+  setStep(1);
+  document.querySelectorAll('.tab-btn')[0].click();
+}
 
-  function showErr(msg) {
-    const el = document.getElementById('inp-err');
-    el.textContent    = msg;
-    el.style.display  = 'block';
-  }
+// ── Analysis ──────────────────────────────────────────────────────────────────
+async function runAnalysis() {
+  const resume = document.getElementById('resume-ta').value.trim();
+  const jd     = document.getElementById('jd-ta').value.trim();
+  document.getElementById('inp-err').style.display = 'none';
 
-  // ── Score color ──────────────────────────────────────────────────────────
-  function sc(n) { return n >= 75 ? 'c-green' : n >= 50 ? 'c-amber' : 'c-red'; }
+  if (!resume)            { showErr('Please upload a resume file or paste your resume text.'); return; }
+  if (resume.length < 80) { showErr('Resume looks too short — please paste the full text.'); return; }
+  if (!jd)                { showErr('Please paste the job description.'); return; }
 
-  // ── Main analysis ─────────────────────────────────────────────────────────
-  async function runAnalysis() {
-    const resume = document.getElementById('resume-ta').value.trim();
-    const jd     = document.getElementById('jd-ta').value.trim();
-    document.getElementById('inp-err').style.display = 'none';
+  document.getElementById('sec-input').style.display = 'none';
+  document.getElementById('sec-load').style.display  = 'block';
+  setStep(2);
 
-    if (!resume)          { showErr('Please upload a resume file or paste your resume text.'); return; }
-    if (resume.length < 80) { showErr('Resume looks too short — please paste the full text.'); return; }
-    if (!jd)              { showErr('Please paste the job description.'); return; }
+  const steps = [
+    [10, 'Reading resume content...'],
+    [22, 'Extracting job description keywords...'],
+    [38, 'Identifying weak bullet points...'],
+    [54, 'Rewriting with achievement framing...'],
+    [70, 'Running ATS compatibility checks...'],
+    [84, 'Detecting skill & experience gaps...'],
+    [94, 'Trimming to 2-page target...'],
+  ];
+  let si = 0;
+  const iv = setInterval(() => { if (si < steps.length) setP(...steps[si++]); }, 1800);
 
-    document.getElementById('sec-input').style.display = 'none';
-    document.getElementById('sec-load').style.display  = 'block';
-    setStep(2);
-
-    const steps = [
-      [10,  'Reading resume content...'],
-      [22,  'Extracting job description keywords...'],
-      [38,  'Identifying weak bullet points...'],
-      [54,  'Rewriting with achievement framing...'],
-      [70,  'Running ATS compatibility checks...'],
-      [84,  'Detecting skill & experience gaps...'],
-      [94,  'Finalizing optimized resume...'],
-    ];
-    let si = 0;
-    const iv = setInterval(() => { if (si < steps.length) setP(...steps[si++]); }, 1800);
-
-    const prompt = `You are an expert resume optimizer and ATS specialist. Analyze the resume against the job description. Return ONLY valid JSON — no markdown fences, no extra text.
+  const prompt = `You are an expert resume optimizer and ATS specialist. Analyze the resume against the job description. Return ONLY valid JSON — no markdown fences, no extra text.
 
 RESUME:
 ${resume.slice(0, 6000)}
@@ -676,195 +428,502 @@ Return this exact JSON:
   "gaps": [
     { "skill": "skill name", "importance": "critical|important|nice-to-have", "suggestion": "concrete suggestion" }
   ],
-  "optimized_resume": "Full optimized resume preserving the EXACT original layout and sections. Only improve content — stronger verbs, leadership language, keywords woven in naturally. Use real newlines."
+  "page_count_estimate": "1 page|2 pages|3+ pages",
+  "trimmed_content": ["describe what was shortened or cut to hit the 2-page target"],
+  "optimized_resume": "Full optimized resume preserving the EXACT original layout and sections. Only improve content. Use real newlines."
 }
 
 Rules:
 - Rewrite 5-7 bullets across multiple jobs
 - Exactly 15 keywords from the JD
 - Flag any title mismatch as HIGH severity
-- optimized_resume must keep all original sections in the same order`;
+- Keep all original sections in the same order
+- TARGET LENGTH: Fill as close to exactly 2 Word pages as possible — not under, not over. A recruiter wants to see a full, confident resume. Follow these rules:
+  * Summary: 3 punchy sentences max
+  * Most recent 2 jobs: 4 strong bullets each
+  * Jobs 3-5 years ago: 2-3 bullets each
+  * Jobs 5+ years ago: 1-2 bullets each — keep them but be concise
+  * Include ALL jobs from the original resume — never drop a job entry entirely
+  * Use bullet points only — no paragraph-style descriptions
+  * Each bullet: one clear achievement, max 120 characters, strong verb, metric where possible
+  * List what you shortened in trimmed_content
+- SKILLS SECTION: Rewrite into compact single-line categories formatted as "Category: skill · skill · skill". Keep max 4-5 categories total. Only include skills that are genuinely relevant to this specific JD — do not pad. Add gap skills that fit naturally. Each line max 110 characters. Most relevant category goes first.`;
 
-    try {
-      const resp = await fetch('/analyze', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model:      'claude-opus-4-5',
-          max_tokens: 6000,
-          messages:   [{ role: 'user', content: prompt }]
-        })
-      });
+  try {
+    const resp = await fetch('/analyze', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 6000, messages: [{ role: 'user', content: prompt }] })
+    });
 
-      clearInterval(iv);
+    clearInterval(iv);
+    if (!resp.ok) { const e = await resp.json(); throw new Error(e.error || 'Server error ' + resp.status); }
 
-      if (!resp.ok) {
-        const err = await resp.json();
-        throw new Error(err.error || 'Server error ' + resp.status);
-      }
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
 
-      const data = await resp.json();
-      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+    let raw = data.content.map(b => b.text || '').join('').trim();
+    raw = raw.replace(/^```json\s*/,'').replace(/^```/,'').replace(/```$/,'').trim();
+    raw = sanitizeJSON(raw);
+    const result = JSON.parse(raw);
+    _vaultData = result; // cache for vault save
 
-      let raw = data.content.map(b => b.text || '').join('').trim();
-      raw = raw.replace(/^```json\s*/,'').replace(/^```/,'').replace(/```$/,'').trim();
-      const result = JSON.parse(raw);
+    setP(100, 'Done!');
+    setTimeout(() => {
+      document.getElementById('sec-load').style.display    = 'none';
+      document.getElementById('sec-results').style.display = 'block';
+      setStep(3);
+      renderResults(result);
+    }, 400);
 
-      setP(100, 'Done!');
-      setTimeout(() => {
-        document.getElementById('sec-load').style.display    = 'none';
-        document.getElementById('sec-results').style.display = 'block';
-        setStep(3);
-        renderResults(result);
-      }, 400);
-
-    } catch (e) {
-      clearInterval(iv);
-      document.getElementById('sec-load').style.display  = 'none';
-      document.getElementById('sec-input').style.display = 'block';
-      setStep(1);
-      showErr('Error: ' + e.message);
-    }
+  } catch(e) {
+    clearInterval(iv);
+    document.getElementById('sec-load').style.display  = 'none';
+    document.getElementById('sec-input').style.display = 'block';
+    setStep(1);
+    showErr('Error: ' + e.message);
   }
+}
 
-  // ── Render results ────────────────────────────────────────────────────────
-  function renderResults(d) {
-    renderOverview(d);
-    renderBullets(d);
-    renderKeywords(d);
-    renderATS(d);
-    renderGaps(d);
-    renderFull(d);
-  }
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderResults(d) {
+  renderOverview(d); renderBullets(d); renderKeywords(d);
+  renderATS(d); renderGaps(d); renderFull(d); renderCoverLetter();
+}
 
-  function renderOverview(d) {
-    const s = d.scores;
-    document.getElementById('tab-overview').innerHTML = `
-      <div class="score-grid">
-        ${[['Overall',s.overall],['ATS',s.ats],['Keywords',s.keywords],['Achievements',s.achievements]].map(([l,v]) => `
-          <div class="score-card">
-            <div class="score-num ${sc(v)}">${v}</div>
-            <div class="score-lbl">${l.toLowerCase()}</div>
-          </div>`).join('')}
+function renderOverview(d) {
+  const s = d.scores;
+  document.getElementById('tab-overview').innerHTML = `
+    <div class="score-grid">
+      ${[['Overall',s.overall],['ATS',s.ats],['Keywords',s.keywords],['Achievements',s.achievements]].map(([l,v])=>
+        `<div class="score-card"><div class="score-num ${sc(v)}">${v}</div><div class="score-lbl">${l.toLowerCase()}</div></div>`
+      ).join('')}
+    </div>
+    <div class="assessment-box">
+      <div class="mini-lbl">Assessment</div>
+      <p>${d.summary}</p>
+    </div>
+    ${d.metrics_prompts && d.metrics_prompts.length ? `
+    <div class="metrics-box">
+      <div class="mtitle">Metrics needed to maximize impact</div>
+      <ul>${d.metrics_prompts.map(q=>`<li>${q}</li>`).join('')}</ul>
+    </div>` : ''}
+    <div class="mini-stats">
+      <div class="mini-stat"><div class="ms-lbl">bullets rewritten</div><div class="ms-val c-green">${(d.rewritten_bullets||[]).length}</div></div>
+      <div class="mini-stat"><div class="ms-lbl">keywords missing</div><div class="ms-val c-red">${(d.keywords&&d.keywords.missing?d.keywords.missing.length:0)}</div></div>
+      <div class="mini-stat"><div class="ms-lbl">gaps found</div><div class="ms-val c-amber">${(d.gaps||[]).length}</div></div>
+    </div>
+    <div id="page-banner">
+      <div class="page-banner warn" style="margin-top:12px;">
+        <div class="pb-icon">⏳</div>
+        <div><div class="pb-title">Checking page length...</div><div class="pb-sub">Measuring the optimized resume against the 2-page limit.</div></div>
       </div>
-      <div class="assessment-box">
-        <div class="mini-lbl">Assessment</div>
-        <p>${d.summary}</p>
-      </div>
-      ${d.metrics_prompts?.length ? `
-      <div class="metrics-box">
-        <div class="mtitle">Metrics needed to maximize impact</div>
-        <ul>${d.metrics_prompts.map(q => `<li>${q}</li>`).join('')}</ul>
-      </div>` : ''}
-      <div class="mini-stats">
-        <div class="mini-stat"><div class="ms-lbl">bullets rewritten</div><div class="ms-val c-green">${(d.rewritten_bullets||[]).length}</div></div>
-        <div class="mini-stat"><div class="ms-lbl">keywords missing</div><div class="ms-val c-red">${(d.keywords?.missing||[]).length}</div></div>
-        <div class="mini-stat"><div class="ms-lbl">gaps found</div><div class="ms-val c-amber">${(d.gaps||[]).length}</div></div>
+    </div>
+    ${d.trimmed_content && d.trimmed_content.length ? `
+    <div class="trimmed-box"><div class="t-lbl">Trimmed to fit 2 pages</div><ul>${d.trimmed_content.map(t=>`<li>${t}</li>`).join('')}</ul></div>` : ''}`;
+
+  // Now check real page count from server
+  const optimizedText = (d.optimized_resume||'').replace(/\\n/g,'\n');
+  fetch('/trim-check', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ text: optimizedText })
+  })
+  .then(r => r.json())
+  .then(result => {
+    const pages  = result.pages;
+    const fits   = pages <= 2.1; // small tolerance
+    const label  = pages <= 1.3 ? '~1 page' : pages <= 2.1 ? '~2 pages' : `~${Math.ceil(pages)} pages`;
+    const cls    = fits ? 'good' : 'warn';
+    const icon   = fits ? '✅' : '⚠️';
+    const sub    = fits
+      ? 'Fits within 2 pages — ideal length for recruiters.'
+      : 'Exceeds 2 pages. The downloaded file will be automatically trimmed to 2 pages.';
+    document.getElementById('page-banner').innerHTML = `
+      <div class="page-banner ${cls}" style="margin-top:12px;">
+        <div class="pb-icon">${icon}</div>
+        <div><div class="pb-title">Estimated length: ${label}</div><div class="pb-sub">${sub}</div></div>
       </div>`;
-  }
+  })
+  .catch(() => { document.getElementById('page-banner').innerHTML = ''; });
+}
 
-  function renderBullets(d) {
-    const bullets = d.rewritten_bullets || [];
-    document.getElementById('tab-bullets').innerHTML = `
-      <div class="sec-title">Rewritten Bullet Points <span class="badge badge-green">${bullets.length} improved</span></div>
-      <p style="font-size:12px;color:var(--text-muted);margin-bottom:1rem;font-family:var(--mono);">Red = original &nbsp;·&nbsp; Green = optimized</p>
-      ${bullets.map(b => `
-        <div class="bullet-card">
-          <div class="b-before">
-            <span class="b-section">${b.section || ''}</span>
-            <span class="badge badge-red" style="float:right;margin-left:8px;">${b.issue || 'weak'}</span>
-            ${b.original}
-          </div>
-          <div class="b-after">${b.improved}</div>
-        </div>`).join('')}`;
-  }
+function renderBullets(d) {
+  const bullets = d.rewritten_bullets || [];
+  document.getElementById('tab-bullets').innerHTML = `
+    <div class="sec-title">Rewritten Bullet Points <span class="badge badge-green">${bullets.length} improved</span></div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:1rem;font-family:var(--mono);">Red = original &nbsp;·&nbsp; Green = optimized</p>
+    ${bullets.map(b=>`
+      <div class="bullet-card">
+        <div class="b-before"><span class="b-section">${b.section||''}</span><span class="badge badge-red" style="float:right;margin-left:8px;">${b.issue||'weak'}</span>${b.original}</div>
+        <div class="b-after">${b.improved}</div>
+      </div>`).join('')}`;
+}
 
-  function renderKeywords(d) {
-    const kw      = d.keywords || {};
-    const present = (kw.present || []).map(k => k.toLowerCase());
-    document.getElementById('tab-keywords').innerHTML = `
-      <div class="sec-title">Top 15 Keywords from Job Description</div>
-      <div class="kw-wrap">
-        ${(kw.top15 || []).map(k =>
-          `<span class="kw ${present.includes(k.toLowerCase()) ? 'kw-ok' : 'kw-no'}">${k}</span>`
-        ).join('')}
+function renderKeywords(d) {
+  const kw = d.keywords || {};
+  const present = (kw.present||[]).map(k=>k.toLowerCase());
+  document.getElementById('tab-keywords').innerHTML = `
+    <div class="sec-title">Top 15 Keywords from Job Description</div>
+    <div class="kw-wrap">${(kw.top15||[]).map(k=>`<span class="kw ${present.includes(k.toLowerCase())?'kw-ok':'kw-no'}">${k}</span>`).join('')}</div>
+    <div class="kw-split">
+      <div>
+        <div class="sec-title">Present <span class="badge badge-green">${(kw.present||[]).length}</span></div>
+        <div class="kw-wrap">${(kw.present||[]).map(k=>`<span class="kw kw-ok">${k}</span>`).join('')||'<span style="font-size:12px;color:var(--text-muted)">None detected</span>'}</div>
       </div>
-      <div class="kw-split">
+      <div>
+        <div class="sec-title">Missing <span class="badge badge-red">${(kw.missing||[]).length}</span></div>
+        <div class="kw-wrap">${(kw.missing||[]).map(k=>`<span class="kw kw-no">${k}</span>`).join('')||'<span style="font-size:12px;color:var(--text-muted)">All present!</span>'}</div>
+        ${(kw.missing||[]).length?'<p style="font-size:11px;color:var(--text-muted);font-family:var(--mono);margin-top:6px;">Integrate naturally into experience bullets.</p>':''}
+      </div>
+    </div>`;
+}
+
+function renderATS(d) {
+  const issues = d.ats_issues || [];
+  const sev = { high:['badge-red','🔴'], medium:['badge-amber','🟡'], low:['badge-blue','🔵'] };
+  document.getElementById('tab-ats').innerHTML = `
+    <div class="sec-title">ATS Compatibility Issues
+      <span class="badge badge-red">${issues.filter(i=>i.severity==='high').length} high</span>
+      <span class="badge badge-amber">${issues.filter(i=>i.severity==='medium').length} medium</span>
+    </div>
+    ${issues.map(i=>{ const [cls,ic]=sev[i.severity]||['badge-blue','🔵']; return `
+      <div class="iss-item">
+        <div class="iss-icon">${ic}</div>
         <div>
-          <div class="sec-title">Present in Resume <span class="badge badge-green">${(kw.present||[]).length}</span></div>
-          <div class="kw-wrap">${(kw.present||[]).map(k=>`<span class="kw kw-ok">${k}</span>`).join('') || '<span style="font-size:12px;color:var(--text-muted)">None detected</span>'}</div>
+          <div class="iss-cat">${i.category} · <span class="badge ${cls}">${i.severity}</span></div>
+          <div class="iss-desc">${i.description}</div>
+          <div class="iss-fix">→ ${i.fix}</div>
         </div>
-        <div>
-          <div class="sec-title">Missing — Add These <span class="badge badge-red">${(kw.missing||[]).length}</span></div>
-          <div class="kw-wrap">${(kw.missing||[]).map(k=>`<span class="kw kw-no">${k}</span>`).join('') || '<span style="font-size:12px;color:var(--text-muted)">All present!</span>'}</div>
-          ${(kw.missing||[]).length ? '<p style="font-size:11px;color:var(--text-muted);font-family:var(--mono);margin-top:6px;">Integrate naturally into experience bullets — not just a Skills section.</p>' : ''}
-        </div>
-      </div>`;
-  }
+      </div>`;}).join('')||'<p style="font-size:13px;color:var(--text-muted)">No major ATS issues detected.</p>'}`;
+}
 
-  function renderATS(d) {
-    const issues = d.ats_issues || [];
-    const sev    = { high: ['badge-red','🔴'], medium: ['badge-amber','🟡'], low: ['badge-blue','🔵'] };
-    document.getElementById('tab-ats').innerHTML = `
-      <div class="sec-title">
-        ATS Compatibility Issues
-        <span class="badge badge-red">${issues.filter(i=>i.severity==='high').length} high</span>
-        <span class="badge badge-amber">${issues.filter(i=>i.severity==='medium').length} medium</span>
-      </div>
-      ${issues.map(i => {
-        const [cls, ic] = sev[i.severity] || ['badge-blue','🔵'];
-        return `<div class="iss-item">
-          <div class="iss-icon">${ic}</div>
-          <div>
-            <div class="iss-cat">${i.category} · <span class="badge ${cls}">${i.severity}</span></div>
-            <div class="iss-desc">${i.description}</div>
-            <div class="iss-fix">→ ${i.fix}</div>
-          </div>
-        </div>`;
-      }).join('') || '<p style="font-size:13px;color:var(--text-muted)">No major ATS issues detected.</p>'}`;
-  }
+function renderGaps(d) {
+  const gaps = d.gaps || [];
+  const imp = { critical:['badge-red','Critical'], important:['badge-amber','Important'], 'nice-to-have':['badge-blue','Nice to have'] };
+  document.getElementById('tab-gaps').innerHTML = `
+    <div class="sec-title">Skill &amp; Experience Gaps</div>
+    <div style="background:#E1F5EE;border:1px solid #9FE1CB;border-radius:var(--radius);padding:11px 14px;margin-bottom:1rem;font-size:12px;color:var(--accent-mid);font-family:var(--mono);">
+      ✅ All gap skills have been added to the <strong>Skills section</strong> of your optimized resume so you won't get filtered out by ATS. Make sure you can speak to them before your interview.
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:1rem;font-family:var(--mono);">These were identified as missing from the JD. Study up before your interview.</p>
+    ${gaps.map(g=>{ const [cls,lbl]=imp[g.importance]||['badge-blue','Other']; return `
+      <div class="gap-item">
+        <div class="gap-header"><span class="gap-skill">${g.skill}</span><span class="badge ${cls}">${lbl}</span></div>
+        <div class="gap-sug">${g.suggestion}</div>
+      </div>`;}).join('')||'<p style="font-size:13px;color:var(--text-muted)">No significant gaps detected!</p>'}`;
+}
 
-  function renderGaps(d) {
-    const gaps = d.gaps || [];
-    const imp  = { critical: ['badge-red','Critical'], important: ['badge-amber','Important'], 'nice-to-have': ['badge-blue','Nice to have'] };
-    document.getElementById('tab-gaps').innerHTML = `
-      <div class="sec-title">Skill &amp; Experience Gaps</div>
-      <p style="font-size:12px;color:var(--text-muted);margin-bottom:1rem;font-family:var(--mono);">Missing skills or experience from the JD not well-represented in your resume.</p>
-      ${gaps.map(g => {
-        const [cls, lbl] = imp[g.importance] || ['badge-blue','Other'];
-        return `<div class="gap-item">
-          <div class="gap-header">
-            <span class="gap-skill">${g.skill}</span>
-            <span class="badge ${cls}">${lbl}</span>
-          </div>
-          <div class="gap-sug">${g.suggestion}</div>
-        </div>`;
-      }).join('') || '<p style="font-size:13px;color:var(--text-muted)">No significant gaps detected!</p>'}`;
-  }
+function renderFull(d) {
+  const raw = (d.optimized_resume||'').replace(/\\n/g,'\n');
+  const fmt = uploadedFileType;
+  const phCount = (raw.match(/\[PLACEHOLDER:/g) || []).length;
 
-  function renderFull(d) {
-    const txt = (d.optimized_resume || '').replace(/\\n/g, '\n');
-    document.getElementById('tab-full').innerHTML = `
-      <div class="sec-title">Optimized Full Resume</div>
-      <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px;font-family:var(--mono);">All improvements applied — ATS-optimized, achievement-focused, keywords integrated.</p>
-      <pre class="resume-pre" id="opt-pre">${txt.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
-      <div class="btn-row">
-        <button class="btn-secondary" onclick="copyFull(this)">Copy full resume</button>
-        <button class="btn-accent"    onclick="downloadTxt()">⬇ Download .txt</button>
-      </div>`;
-  }
+  // Build highlighted HTML
+  const highlighted = raw
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\[PLACEHOLDER:([\s\S]*?)\]/g,
+      '<mark class="ph-mark">[PLACEHOLDER:$1]</mark>');
 
-  function copyFull(btn) {
-    navigator.clipboard.writeText(document.getElementById('opt-pre').textContent)
-      .then(() => { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy full resume'; }, 2000); });
-  }
+  document.getElementById('tab-full').innerHTML = `
+    <div class="sec-title">Optimized Full Resume
+      ${phCount ? '<span class="badge badge-amber">'+phCount+' gap placeholder'+(phCount>1?'s':'')+'</span>' : ''}
+    </div>
+    <div style="background:#E1F5EE;border:1px solid #9FE1CB;border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;font-size:12px;font-family:var(--mono);color:var(--accent-mid);">
+      ${fmt==='docx'?'📘':fmt==='pdf'?'📕':'📄'} Download will produce a <strong>.${fmt}</strong> file matching your original format.
+    </div>
+    ${phCount ? `<div style="background:#FAEEDA;border:1px solid #FAC775;border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:12px;line-height:1.6;color:#7A4E0A;">
+      <strong>⚠️ `+phCount+` gap placeholder`+(phCount>1?'s are':' is')+` highlighted in amber.</strong>
+      These are preparation guides — fill them in as you gain the experience, then remove the [PLACEHOLDER: ] wrapper before submitting your resume.
+    </div>` : ''}
+    <div class="resume-pre" id="opt-pre">${highlighted}</div>
+    <div class="btn-row" style="margin-top:10px;">
+      <button class="btn-secondary" id="copy-btn">Copy text</button>
+      <button class="btn-accent" id="dl-btn">&#11015; Download .${fmt}</button>
+      <button class="btn-secondary" id="save-vault-btn" style="border-color:#9FE1CB;color:#0F6E56;" onclick="showSaveVaultModal()">🗄️ Save to Vault</button>
+    </div>
+    <div id="dl-err" style="display:none;margin-top:8px;font-size:12px;color:var(--danger);font-family:var(--mono);"></div>
+    <div id="vault-success" style="display:none;margin-top:8px;padding:8px 12px;background:#E1F5EE;border:1px solid #9FE1CB;border-radius:var(--radius);font-size:12px;color:#0F6E56;font-family:var(--mono);"></div>`;
 
-  function downloadTxt() {
+  document.getElementById('copy-btn').addEventListener('click', function() {
+    navigator.clipboard.writeText(document.getElementById('opt-pre').innerText)
+      .then(() => { this.textContent = 'Copied!'; setTimeout(() => { this.textContent = 'Copy text'; }, 2000); });
+  });
+  document.getElementById('dl-btn').addEventListener('click', downloadFormatted);
+}
+
+async function downloadFormatted() {
+  const text  = document.getElementById('opt-pre').textContent;
+  const fmt   = uploadedFileType;
+  const btn   = document.getElementById('dl-btn');
+  const errEl = document.getElementById('dl-err');
+  errEl.style.display = 'none';
+
+  // Strip placeholder markers for the download — leave the example text as a reminder
+  const cleanText = text.replace(/\[PLACEHOLDER:\s*/g, '[TODO: ').replace(/\]/g, ']');
+
+  if (fmt === 'txt') {
     const a = document.createElement('a');
-    a.href     = URL.createObjectURL(new Blob([document.getElementById('opt-pre').textContent], { type: 'text/plain' }));
-    a.download = 'resume_optimized.txt';
-    a.click();
+    a.href = URL.createObjectURL(new Blob([cleanText], { type:'text/plain' }));
+    a.download = 'resume_optimized.txt'; a.click(); return;
   }
+
+  btn.textContent = '⏳ Generating...'; btn.disabled = true;
+  const endpoint = fmt === 'docx' ? '/generate-docx' : '/generate-pdf';
+  try {
+    const resp = await fetch(endpoint, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ text })
+    });
+    if (!resp.ok) { const e = await resp.json(); throw new Error(e.error||'Server error'); }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(await resp.blob());
+    a.download = 'resume_optimized.' + fmt; a.click();
+    btn.textContent = '✓ Downloaded'; setTimeout(()=>{ btn.textContent='⬇ Download .'+fmt; btn.disabled=false; }, 3000);
+  } catch(e) {
+    errEl.textContent = 'Download failed: ' + e.message; errEl.style.display='block';
+    btn.textContent = '⬇ Download .'+fmt; btn.disabled=false;
+  }
+}
+
+// ── Cover Letter ─────────────────────────────────────────────────────────────
+function renderCoverLetter() {
+  document.getElementById('tab-cover').innerHTML = `
+    <div class="sec-title">Cover Letter Generator</div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1.25rem;line-height:1.6;">
+      Generate a tailored cover letter based on your optimized resume and the job description. Customize the tone and what to emphasize.
+    </p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div>
+        <label style="display:block;font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:5px;">Your Name</label>
+        <input id="cl-name" type="text" placeholder="Esteban Montesinos" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--sans);background:var(--surface);color:var(--text);">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:5px;">Hiring Manager (optional)</label>
+        <input id="cl-manager" type="text" placeholder="e.g. Sarah Chen, or leave blank" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--sans);background:var(--surface);color:var(--text);">
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div>
+        <label style="display:block;font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:5px;">Company Name</label>
+        <input id="cl-company" type="text" placeholder="e.g. Acme Corp" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--sans);background:var(--surface);color:var(--text);">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:5px;">Tone</label>
+        <select id="cl-tone" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--sans);background:var(--surface);color:var(--text);">
+          <option value="professional">Professional & Confident</option>
+          <option value="enthusiastic">Enthusiastic & Warm</option>
+          <option value="concise">Concise & Direct</option>
+          <option value="executive">Executive & Strategic</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-bottom:1.25rem;">
+      <label style="display:block;font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:5px;">Anything specific to emphasize? (optional)</label>
+      <textarea id="cl-emphasis" rows="2" placeholder="e.g. My experience at Solairus Aviation directly matches their use case. I want to highlight my consulting background." style="width:100%;resize:vertical;font-family:var(--mono);font-size:12px;line-height:1.6;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);"></textarea>
+    </div>
+
+    <button id="cl-generate-btn" onclick="generateCoverLetter()" style="width:100%;padding:13px;background:var(--accent);color:white;border:none;border-radius:var(--radius);font-size:14px;font-weight:500;font-family:var(--sans);cursor:pointer;margin-bottom:1rem;">
+      Generate Cover Letter →
+    </button>
+
+    <div id="cl-loading" style="display:none;text-align:center;padding:2rem;">
+      <div style="width:100%;height:3px;background:#e5e5e3;border-radius:2px;overflow:hidden;margin-bottom:10px;">
+        <div style="height:100%;background:var(--accent);border-radius:2px;animation:loadprogress 2s ease-in-out infinite;"></div>
+      </div>
+      <div style="font-family:var(--mono);font-size:12px;color:var(--text-muted);">Crafting your cover letter...</div>
+    </div>
+
+    <div id="cl-result" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div class="sec-title" style="margin-bottom:0;">Your Cover Letter</div>
+        <div style="display:flex;gap:6px;">
+          <button onclick="copyCoverLetter(this)" class="btn-secondary" style="padding:6px 12px;font-size:12px;">Copy</button>
+          <button onclick="downloadCoverLetter()" class="btn-accent" style="padding:6px 12px;font-size:12px;">⬇ Download .txt</button>
+        </div>
+      </div>
+      <pre id="cl-text" style="font-family:var(--mono);font-size:12px;line-height:1.85;white-space:pre-wrap;color:var(--text);background:#fafaf9;border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.5rem;max-height:540px;overflow-y:auto;margin-bottom:8px;"></pre>
+      <p style="font-size:11px;color:var(--text-muted);font-family:var(--mono);">Tip: personalize before sending — add a specific detail about the company that shows you did your research.</p>
+    </div>
+
+    <div id="cl-err" style="display:none;padding:10px 14px;background:var(--danger-light);border:1px solid #F09595;border-radius:var(--radius);font-size:13px;color:var(--danger);font-family:var(--mono);"></div>
+  `;
+}
+
+async function generateCoverLetter() {
+  const name     = document.getElementById('cl-name').value.trim();
+  const manager  = document.getElementById('cl-manager').value.trim();
+  const company  = document.getElementById('cl-company').value.trim();
+  const tone     = document.getElementById('cl-tone').value;
+  const emphasis = document.getElementById('cl-emphasis').value.trim();
+  const errEl    = document.getElementById('cl-err');
+  errEl.style.display = 'none';
+
+  if (!name)    { errEl.textContent = 'Please enter your name.'; errEl.style.display = 'block'; return; }
+  if (!company) { errEl.textContent = 'Please enter the company name.'; errEl.style.display = 'block'; return; }
+
+  const resumeText = _vaultData && _vaultData.optimized_resume
+    ? _vaultData.optimized_resume.replace(/\n/g, '
+')
+    : document.getElementById('resume-ta') ? document.getElementById('resume-ta').value : '';
+
+  const jd = document.getElementById('jd-ta') ? document.getElementById('jd-ta').value : '';
+
+  document.getElementById('cl-loading').style.display = 'block';
+  document.getElementById('cl-result').style.display  = 'none';
+  document.getElementById('cl-generate-btn').disabled = true;
+
+  const toneMap = {
+    professional:  'professional, confident, and polished',
+    enthusiastic:  'enthusiastic, warm, and genuine',
+    concise:       'concise, direct, and to the point — no fluff',
+    executive:     'executive, strategic, and leadership-focused'
+  };
+
+  const prompt = `Write a compelling cover letter for a job application. Return ONLY the cover letter text — no explanation, no subject line, no markdown.
+
+CANDIDATE RESUME:
+${resumeText.slice(0, 4000)}
+
+JOB DESCRIPTION:
+${jd.slice(0, 2000)}
+
+PARAMETERS:
+- Candidate name: ${name}
+- Company: ${company}
+- Hiring manager: ${manager || 'Hiring Manager'}
+- Tone: ${toneMap[tone]}
+- Special emphasis: ${emphasis || 'none'}
+
+RULES:
+- Max 4 paragraphs, max 350 words total
+- Opening: hook that shows genuine interest in THIS company/role specifically
+- Body paragraph 1: strongest achievement from resume most relevant to this JD
+- Body paragraph 2: second key strength + why this company/role fits the candidate's trajectory
+- Closing: confident call to action, no begging
+- Use "Dear ${manager ? manager : 'Hiring Team'}," as salutation
+- End with "Sincerely,\n${name}"
+- Never use generic phrases like "I am writing to apply" or "I believe I would be a great fit"
+- Make every sentence earn its place`;
+
+  try {
+    const resp = await fetch('/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-opus-4-5',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+
+    const text = data.content.map(b => b.text || '').join('').trim();
+
+    document.getElementById('cl-text').textContent = text;
+    document.getElementById('cl-result').style.display  = 'block';
+    document.getElementById('cl-loading').style.display = 'none';
+    document.getElementById('cl-generate-btn').disabled = false;
+
+  } catch(e) {
+    document.getElementById('cl-loading').style.display = 'none';
+    document.getElementById('cl-generate-btn').disabled = false;
+    errEl.textContent = 'Error: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+function copyCoverLetter(btn) {
+  const text = document.getElementById('cl-text').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+  });
+}
+
+function downloadCoverLetter() {
+  const text    = document.getElementById('cl-text').textContent;
+  const company = document.getElementById('cl-company').value.trim().replace(/\s+/g, '_') || 'company';
+  const a = document.createElement('a');
+  a.href     = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+  a.download = `cover_letter_${company}.txt`;
+  a.click();
+}
+
+// ── Vault ─────────────────────────────────────────────────────────────────────
+let _vaultData = null; // store analysis data for vault save
+
+function showSaveVaultModal() {
+  // Create modal if it doesn't exist
+  let modal = document.getElementById('vault-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'vault-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:1rem;';
+    modal.innerHTML = `
+      <div style="background:white;border-radius:var(--radius-lg);padding:2rem;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div style="font-family:var(--serif);font-size:22px;margin-bottom:6px;">Save to <em style="color:#1D9E75;font-style:italic;">Vault</em></div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:1.5rem;">Tag this resume so you can find it before an interview.</p>
+        <div style="margin-bottom:12px;">
+          <label style="display:block;font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:5px;">Company Name *</label>
+          <input id="vault-company" type="text" placeholder="e.g. Google, Stripe, Anthropic..." style="width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,0.2);border-radius:var(--radius);font-size:14px;font-family:var(--sans);outline:none;">
+        </div>
+        <div style="margin-bottom:1.5rem;">
+          <label style="display:block;font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:5px;">Job Title</label>
+          <input id="vault-jobtitle" type="text" placeholder="e.g. Engineering Manager" style="width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,0.2);border-radius:var(--radius);font-size:14px;font-family:var(--sans);outline:none;">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="saveToVault()" style="flex:1;padding:11px;background:#1D9E75;color:white;border:none;border-radius:var(--radius);font-size:14px;font-weight:500;font-family:var(--sans);cursor:pointer;">Save Resume</button>
+          <button onclick="document.getElementById('vault-modal').remove()" style="padding:11px 16px;background:white;border:1px solid rgba(0,0,0,0.2);border-radius:var(--radius);font-size:14px;font-family:var(--sans);cursor:pointer;">Cancel</button>
+        </div>
+        <div id="vault-modal-err" style="display:none;margin-top:8px;font-size:12px;color:#A32D2D;font-family:var(--mono);"></div>
+      </div>`;
+    document.body.appendChild(modal);
+    // Close on backdrop click
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  }
+  document.getElementById('vault-modal').style.display = 'flex';
+  document.getElementById('vault-company').focus();
+}
+
+async function saveToVault() {
+  const company  = document.getElementById('vault-company').value.trim();
+  const jobTitle = document.getElementById('vault-jobtitle').value.trim();
+  const errEl    = document.getElementById('vault-modal-err');
+  errEl.style.display = 'none';
+
+  if (!company) { errEl.textContent = 'Please enter a company name.'; errEl.style.display = 'block'; return; }
+
+  const resumeText = document.getElementById('opt-pre') ? document.getElementById('opt-pre').innerText : '';
+  const payload = {
+    company,
+    jobTitle,
+    resumeText,
+    analysisScores: _vaultData ? _vaultData.scores : null,
+    keywords: _vaultData && _vaultData.keywords ? _vaultData.keywords.top15 : []
+  };
+
+  try {
+    const resp = await fetch('/vault/save', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Save failed');
+
+    document.getElementById('vault-modal').remove();
+    const successEl = document.getElementById('vault-success');
+    if (successEl) {
+      successEl.textContent = '✓ Saved to vault for ' + company + '. View it anytime in My Vault before your interview.';
+      successEl.style.display = 'block';
+    }
+  } catch(e) {
+    errEl.textContent = 'Error: ' + e.message; errEl.style.display = 'block';
+  }
+}
 </script>
 </body>
 </html>

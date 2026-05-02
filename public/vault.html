@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Resume Vault</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --accent:#1D9E75; --accent-light:#E1F5EE; --accent-mid:#0F6E56;
+      --danger:#A32D2D; --danger-light:#FCEBEB;
+      --warn:#BA7517; --warn-light:#FAEEDA;
+      --bg:#f9f9f8; --surface:#fff;
+      --border:rgba(0,0,0,0.1); --border-strong:rgba(0,0,0,0.2);
+      --text:#1a1a1a; --muted:#6b6b6b;
+      --radius:10px; --sans:'DM Sans',sans-serif; --mono:'DM Mono',monospace; --serif:'Instrument Serif',serif;
+    }
+    body { font-family:var(--sans); background:var(--bg); color:var(--text); min-height:100vh; }
+    .shell { max-width:900px; margin:0 auto; padding:2.5rem 1.5rem 4rem; }
+
+    .header { display:flex; align-items:center; justify-content:space-between; margin-bottom:2rem; padding-bottom:1.5rem; border-bottom:1px solid var(--border); }
+    .header h1 { font-family:var(--serif); font-size:26px; font-weight:400; }
+    .header h1 em { color:var(--accent); font-style:italic; }
+    .back-btn { padding:8px 16px; background:var(--surface); border:1px solid var(--border-strong); border-radius:var(--radius); font-size:13px; font-family:var(--sans); cursor:pointer; color:var(--text); text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+    .back-btn:hover { background:#f0f0ef; }
+
+    .empty-state { text-align:center; padding:4rem 2rem; color:var(--muted); }
+    .empty-state .ei { font-size:48px; margin-bottom:1rem; }
+    .empty-state p { font-size:14px; line-height:1.7; }
+
+    .vault-grid { display:flex; flex-direction:column; gap:12px; }
+
+    .vault-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; transition:box-shadow 0.15s; }
+    .vault-card:hover { box-shadow:0 2px 12px rgba(0,0,0,0.08); }
+    .card-header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; cursor:pointer; gap:12px; }
+    .card-meta { flex:1; min-width:0; }
+    .card-company { font-size:15px; font-weight:500; color:var(--text); margin-bottom:3px; }
+    .card-title { font-size:12px; color:var(--muted); font-family:var(--mono); }
+    .card-date { font-size:11px; font-family:var(--mono); color:var(--muted); white-space:nowrap; }
+    .card-scores { display:flex; gap:8px; flex-shrink:0; }
+    .score-chip { font-size:11px; font-family:var(--mono); padding:2px 8px; border-radius:20px; }
+    .sc-green { background:var(--accent-light); color:var(--accent-mid); }
+    .sc-amber { background:var(--warn-light); color:var(--warn); }
+    .sc-red { background:var(--danger-light); color:var(--danger); }
+    .card-chevron { font-size:12px; color:var(--muted); transition:transform 0.2s; flex-shrink:0; }
+    .card-chevron.open { transform:rotate(180deg); }
+
+    .card-body { display:none; border-top:1px solid var(--border); padding:16px; }
+    .card-body.open { display:block; }
+
+    .resume-pre { font-family:var(--mono); font-size:11.5px; line-height:1.8; white-space:pre-wrap; color:var(--text); background:#fafaf9; border:1px solid var(--border); border-radius:var(--radius); padding:1rem 1.25rem; max-height:420px; overflow-y:auto; margin-bottom:12px; }
+
+    .kw-wrap { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px; }
+    .kw { padding:3px 9px; border-radius:20px; font-size:11px; font-family:var(--mono); background:var(--accent-light); color:var(--accent-mid); border:1px solid #9FE1CB; }
+
+    .btn-row { display:flex; gap:8px; flex-wrap:wrap; }
+    .btn-primary { padding:9px 16px; background:var(--accent); color:white; border:none; border-radius:var(--radius); font-size:13px; font-family:var(--sans); cursor:pointer; }
+    .btn-primary:hover { background:var(--accent-mid); }
+    .btn-danger { padding:9px 16px; background:var(--surface); color:var(--danger); border:1px solid #F09595; border-radius:var(--radius); font-size:13px; font-family:var(--sans); cursor:pointer; }
+    .btn-danger:hover { background:var(--danger-light); }
+    .btn-sec { padding:9px 16px; background:var(--surface); color:var(--text); border:1px solid var(--border-strong); border-radius:var(--radius); font-size:13px; font-family:var(--sans); cursor:pointer; }
+    .btn-sec:hover { background:#f0f0ef; }
+
+    .mini-lbl { font-size:10px; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
+
+    .toast { position:fixed; bottom:24px; right:24px; background:#1a1a1a; color:white; padding:10px 18px; border-radius:var(--radius); font-size:13px; font-family:var(--mono); opacity:0; transition:opacity 0.2s; pointer-events:none; }
+    .toast.show { opacity:1; }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <div class="header">
+    <h1>Resume <em>Vault</em></h1>
+    <a href="/" class="back-btn">← Back to Optimizer</a>
+  </div>
+
+  <div id="vault-content">
+    <div class="empty-state"><div class="ei">⏳</div><p>Loading your vault...</p></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+function scoreClass(n) { return n >= 75 ? 'sc-green' : n >= 50 ? 'sc-amber' : 'sc-red'; }
+
+function formatDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) +
+    ' ' + d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function toggleCard(id) {
+  const body = document.getElementById('body-' + id);
+  const chev = document.getElementById('chev-' + id);
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chev.classList.toggle('open', !isOpen);
+  if (!isOpen) loadCardContent(id);
+}
+
+async function loadCardContent(id) {
+  const container = document.getElementById('resume-content-' + id);
+  if (container.dataset.loaded) return;
+  container.dataset.loaded = '1';
+  container.innerHTML = '<div style="font-size:12px;color:var(--muted);font-family:var(--mono);">Loading...</div>';
+  try {
+    const r = await fetch('/vault/' + id);
+    const entry = await r.json();
+    const kws = (entry.keywords || []).slice(0, 15);
+    container.innerHTML = `
+      ${kws.length ? `<div class="mini-lbl">Keywords targeted</div>
+      <div class="kw-wrap">${kws.map(k => `<span class="kw">${k}</span>`).join('')}</div>` : ''}
+      <div class="mini-lbl">Resume sent</div>
+      <pre class="resume-pre">${entry.resumeText.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="copyResume('${id}')">Copy resume text</button>
+        <button class="btn-sec" onclick="downloadTxt('${id}')">⬇ Download .txt</button>
+        <button class="btn-danger" onclick="deleteEntry('${id}')">Delete</button>
+      </div>`;
+    // Cache text for copy/download
+    container.dataset.text = entry.resumeText;
+    container.dataset.company = entry.company;
+  } catch(e) {
+    container.innerHTML = '<div style="color:var(--danger);font-size:12px;">Failed to load: ' + e.message + '</div>';
+  }
+}
+
+function copyResume(id) {
+  const container = document.getElementById('resume-content-' + id);
+  navigator.clipboard.writeText(container.dataset.text)
+    .then(() => showToast('Copied to clipboard!'));
+}
+
+function downloadTxt(id) {
+  const container = document.getElementById('resume-content-' + id);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([container.dataset.text], { type:'text/plain' }));
+  a.download = (container.dataset.company || 'resume').replace(/\s+/g,'_') + '_resume.txt';
+  a.click();
+}
+
+async function deleteEntry(id) {
+  if (!confirm('Delete this resume from the vault?')) return;
+  await fetch('/vault/' + id, { method:'DELETE' });
+  document.getElementById('card-' + id).remove();
+  showToast('Deleted');
+  // If no cards left, show empty state
+  if (!document.querySelector('.vault-card')) {
+    document.getElementById('vault-content').innerHTML = emptyHTML();
+  }
+}
+
+function emptyHTML() {
+  return `<div class="empty-state">
+    <div class="ei">🗄️</div>
+    <p>No resumes saved yet.<br>Optimize a resume and click <strong>"Save to Vault"</strong> to store it here.</p>
+  </div>`;
+}
+
+async function loadVault() {
+  try {
+    const r = await fetch('/vault/list');
+    const list = await r.json();
+    const el = document.getElementById('vault-content');
+
+    if (!list.length) { el.innerHTML = emptyHTML(); return; }
+
+    el.innerHTML = `
+      <div style="font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:1rem;">${list.length} resume${list.length===1?'':'s'} saved — click any card to expand</div>
+      <div class="vault-grid">
+        ${list.map(entry => {
+          const s = entry.analysisScores || {};
+          const scores = s.overall != null ? `
+            <div class="card-scores">
+              <span class="score-chip ${scoreClass(s.overall)}">${s.overall} overall</span>
+              <span class="score-chip ${scoreClass(s.ats)}">${s.ats} ATS</span>
+            </div>` : '';
+          return `
+            <div class="vault-card" id="card-${entry.id}">
+              <div class="card-header" onclick="toggleCard('${entry.id}')">
+                <div class="card-meta">
+                  <div class="card-company">${entry.company}</div>
+                  <div class="card-title">${entry.jobTitle || 'No title saved'}</div>
+                </div>
+                ${scores}
+                <div class="card-date">${formatDate(entry.savedAt)}</div>
+                <div class="card-chevron" id="chev-${entry.id}">▼</div>
+              </div>
+              <div class="card-body" id="body-${entry.id}">
+                <div id="resume-content-${entry.id}"></div>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>`;
+  } catch(e) {
+    document.getElementById('vault-content').innerHTML =
+      `<div style="color:var(--danger);font-size:13px;font-family:var(--mono);">Could not load vault: ${e.message}</div>`;
+  }
+}
+
+loadVault();
+</script>
+</body>
+</html>

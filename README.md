@@ -69,3 +69,28 @@ resume-optimizer/
 └── public/
     └── index.html   ← Full app UI
 ```
+
+---
+
+## MongoDB Setup (Free — Vault storage)
+
+The vault uses MongoDB Atlas so your saved resumes survive deployments and ZIP replacements.
+
+### 1. Create a free Atlas cluster
+1. Go to https://mongodb.com/atlas and sign up free
+2. Create a free **M0** cluster (no credit card needed)
+3. Create a database user: Security → Database Access → Add New User
+   - Username + password of your choice
+   - Role: **Read and Write to any database**
+4. Allow network access: Security → Network Access → Add IP Address → **Allow Access from Anywhere** (`0.0.0.0/0`)
+5. Get your connection string: Deployment → Database → Connect → Drivers → copy the URI
+
+### 2. Add to your .env
+```
+MONGODB_URI=mongodb+srv://youruser:yourpassword@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
+```
+
+### 3. For Railway deployment
+Add `MONGODB_URI` as an environment variable in your Railway dashboard alongside `ANTHROPIC_API_KEY`.
+
+That's it — your vault data lives in the cloud and never gets wiped.

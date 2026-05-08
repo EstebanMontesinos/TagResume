@@ -1,7 +1,8 @@
-const express  = require('express');
-const cors     = require('cors');
-const fs       = require('fs');
-const path     = require('path');
+const express    = require('express');
+const cors       = require('cors');
+const fs         = require('fs');
+const path       = require('path');
+const { MongoClient, ObjectId } = require('mongodb');
 const {
   Document, Packer, Paragraph, TextRun,
   AlignmentType, LevelFormat, BorderStyle, TabStopType
@@ -14,74 +15,114 @@ app.use(cors());
 app.use(express.json({ limit: '4mb' }));
 app.use(express.static('public'));
 
-// ── Resume Vault ──────────────────────────────────────────────────────────────
-const VAULT_FILE = path.join(__dirname, 'vault.json');
+// ── MongoDB connection ────────────────────────────────────────────────────────
+let db = null;
 
-function loadVault() {
-  try { return JSON.parse(fs.readFileSync(VAULT_FILE, 'utf8')); }
-  catch { return []; }
+async function getDB() {
+  if (db) return db;
+  if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI not set in .env');
+  const client = new MongoClient(process.env.MONGODB_URI);
+  await client.connect();
+  db = client.db('resume_optimizer');
+  console.log('Connected to MongoDB');
+  return db;
 }
 
-function saveVault(vault) {
-  fs.writeFileSync(VAULT_FILE, JSON.stringify(vault, null, 2));
-}
+// ── Resume Vault (MongoDB) ────────────────────────────────────────────────────
 
-// Save a resume entry to the vault
-app.post('/vault/save', (req, res) => {
+// Save entry
+app.post('/vault/save', async (req, res) => {
   try {
     const { company, jobTitle, resumeText, analysisScores, keywords } = req.body;
     if (!company || !resumeText) return res.status(400).json({ error: 'company and resumeText required' });
-
-    const vault = loadVault();
+    const db = await getDB();
     const entry = {
-      id:           Date.now().toString(),
-      savedAt:      new Date().toISOString(),
-      company:      company.trim(),
-      jobTitle:     jobTitle || '',
+      savedAt:        new Date(),
+      company:        company.trim(),
+      jobTitle:       jobTitle || '',
       resumeText,
       analysisScores: analysisScores || null,
-      keywords:     keywords || [],
+      keywords:       keywords || [],
     };
-    vault.unshift(entry); // newest first
-    saveVault(vault);
-    res.json({ success: true, id: entry.id });
+    const result = await db.collection('vault').insertOne(entry);
+    res.json({ success: true, id: result.insertedId.toString() });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-// Get all vault entries (without full resume text for speed)
-app.get('/vault/list', (req, res) => {
+// List entries (no resumeText for speed)
+app.get('/vault/list', async (req, res) => {
   try {
-    const vault = loadVault();
-    const list = vault.map(({ id, savedAt, company, jobTitle, analysisScores, keywords }) =>
-      ({ id, savedAt, company, jobTitle, analysisScores, keywords })
-    );
-    res.json(list);
+    const db = await getDB();
+    const list = await db.collection('vault')
+      .find({}, { projection: { resumeText: 0 } })
+      .sort({ savedAt: -1 })
+      .toArray();
+    res.json(list.map(e => ({ ...e, id: e._id.toString() })));
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-// Get a single vault entry with full resume text
-app.get('/vault/:id', (req, res) => {
+// Get single entry
+app.get('/vault/:id', async (req, res) => {
   try {
-    const vault = loadVault();
-    const entry = vault.find(e => e.id === req.params.id);
+    const db = await getDB();
+    const entry = await db.collection('vault').findOne({ _id: new ObjectId(req.params.id) });
     if (!entry) return res.status(404).json({ error: 'Not found' });
-    res.json(entry);
+    res.json({ ...entry, id: entry._id.toString() });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-// Delete a vault entry
-app.delete('/vault/:id', (req, res) => {
+// Delete entry
+app.delete('/vault/:id', async (req, res) => {
   try {
-    const vault = loadVault();
-    const filtered = vault.filter(e => e.id !== req.params.id);
-    saveVault(filtered);
+    const db = await getDB();
+    await db.collection('vault').deleteOne({ _id: new ObjectId(req.params.id) });
     res.json({ success: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Cover Letter DOCX generator ──────────────────────────────────────────────
+app.post('/generate-cover-letter-docx', async (req, res) => {
+  try {
+    const { text, company, name } = req.body;
+    if (!text) return res.status(400).json({ error: 'text required' });
+
+    const FONT = 'Calibri';
+    const lines = text.split('\n');
+    const children = [];
+
+    for (const raw of lines) {
+      const line = raw.trim();
+      children.push(new Paragraph({
+        spacing: { after: line === '' ? 0 : 120 },
+        children: [new TextRun({ text: line, font: FONT, size: 22 })]
+      }));
+    }
+
+    const doc = new Document({
+      sections: [{
+        properties: {
+          page: {
+            size: { width: 12240, height: 15840 },
+            margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 }
+          }
+        },
+        children
+      }]
+    });
+
+    const buffer = await Packer.toBuffer(doc);
+    const filename = `cover_letter_${(company || 'application').replace(/\s+/g, '_')}.docx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(buffer);
   } catch(e) {
     res.status(500).json({ error: e.message });
   }

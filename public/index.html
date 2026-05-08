@@ -847,13 +847,31 @@ function copyCoverLetter(btn) {
   });
 }
 
-function downloadCoverLetter() {
+async function downloadCoverLetter() {
   const text    = document.getElementById('cl-text').textContent;
-  const company = document.getElementById('cl-company').value.trim().replace(/\s+/g, '_') || 'company';
-  const a = document.createElement('a');
-  a.href     = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
-  a.download = `cover_letter_${company}.txt`;
-  a.click();
+  const company = document.getElementById('cl-company').value.trim() || 'application';
+  const name    = document.getElementById('cl-name').value.trim() || '';
+  const btn     = event.target;
+
+  btn.textContent = 'Generating...'; btn.disabled = true;
+  try {
+    const resp = await fetch('/generate-cover-letter-docx', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, company, name })
+    });
+    if (!resp.ok) throw new Error('Server error ' + resp.status);
+    const blob = await resp.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `cover_letter_${company.replace(/\s+/g,'_')}.docx`;
+    a.click();
+    btn.textContent = '✓ Downloaded';
+    setTimeout(() => { btn.textContent = 'Download .docx'; btn.disabled = false; }, 2500);
+  } catch(e) {
+    alert('Download failed: ' + e.message);
+    btn.textContent = 'Download .docx'; btn.disabled = false;
+  }
 }
 
 // -- Vault ---------------------------------------------------------------------

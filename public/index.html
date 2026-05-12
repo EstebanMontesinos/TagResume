@@ -176,7 +176,10 @@
   <div class="header">
     <h1>Resume <em>Optimizer</em></h1>
     <span class="header-sub">ATS-ready · Achievement-focused · 2-page target</span>
-    <a href="/vault.html" style="margin-left:auto;padding:7px 14px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);font-size:12px;font-family:var(--mono);color:var(--text);text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;">🗄️ My Vault</a>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+      <button id="lang-toggle" onclick="toggleLang()" style="padding:7px 14px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);font-size:12px;font-family:var(--mono);color:var(--text);cursor:pointer;">🇪🇸 Español</button>
+      <a href="/vault.html" style="padding:7px 14px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);font-size:12px;font-family:var(--mono);color:var(--text);text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;">🗄️ My Vault</a>
+    </div>
   </div>
 
   <div class="steps">
@@ -252,6 +255,114 @@
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 let uploadedFileType = 'txt';
 
+// -- Language support -------------------------------------------------------
+let currentLang = localStorage.getItem('lang') || 'en';
+
+const T = {
+  en: {
+    subtitle:        'ATS-ready · Achievement-focused · 2-page target',
+    resumeLabel:     'Resume',
+    uploadMain:      'Upload your resume',
+    uploadSub:       'PDF · DOCX · TXT',
+    uploadLoaded:    'File loaded — change file above',
+    orPaste:         '— or paste below —',
+    resumePlaceholder: 'Paste resume text here...',
+    jdLabel:         'Job Description',
+    jdPlaceholder:   'Paste the full job description here...',
+    analyzeBtn:      'Analyze & Optimize Resume →',
+    resetBtn:        '← Analyze Another Resume',
+    tabOverview:     'Overview',
+    tabBullets:      'Rewritten Bullets',
+    tabKeywords:     'Keywords',
+    tabATS:          'ATS Checks',
+    tabGaps:         'Gap Analysis',
+    tabFull:         'Full Resume',
+    tabCover:        '✉️ Cover Letter',
+    myVault:         '🗄️ My Vault',
+    langToggle:      '🇪🇸 Español',
+    step1:           '1 · Upload',
+    step2:           '2 · Analyze',
+    step3:           '3 · Results',
+    aiLang:          'Respond entirely in English.',
+  },
+  es: {
+    subtitle:        'Listo para ATS · Orientado a logros · Meta de 2 páginas',
+    resumeLabel:     'Currículum',
+    uploadMain:      'Subir currículum',
+    uploadSub:       'PDF · DOCX · TXT',
+    uploadLoaded:    'Archivo cargado — cambiar arriba',
+    orPaste:         '— o pega el texto abajo —',
+    resumePlaceholder: 'Pega el texto de tu currículum aquí...',
+    jdLabel:         'Descripción del Puesto',
+    jdPlaceholder:   'Pega la descripción completa del puesto aquí...',
+    analyzeBtn:      'Analizar y Optimizar Currículum →',
+    resetBtn:        '← Analizar Otro Currículum',
+    tabOverview:     'Resumen',
+    tabBullets:      'Puntos Reescritos',
+    tabKeywords:     'Palabras Clave',
+    tabATS:          'Revisión ATS',
+    tabGaps:         'Análisis de Brechas',
+    tabFull:         'Currículum Completo',
+    tabCover:        '✉️ Carta de Presentación',
+    myVault:         '🗄️ Mi Bóveda',
+    langToggle:      '🇺🇸 English',
+    step1:           '1 · Subir',
+    step2:           '2 · Analizar',
+    step3:           '3 · Resultados',
+    aiLang:          'Responde completamente en español. Todos los textos, análisis, bullets reescritos, palabras clave, problemas ATS, brechas y el currículum optimizado deben estar en español.',
+  }
+};
+
+function t(key) { return T[currentLang][key] || T.en[key] || key; }
+
+function applyLang() {
+  const lang = currentLang;
+  // Header
+  document.querySelector('.header-sub').textContent = t('subtitle');
+  document.getElementById('lang-toggle').textContent = t('langToggle');
+  // Steps
+  document.getElementById('sp1').textContent = t('step1');
+  document.getElementById('sp2').textContent = t('step2');
+  document.getElementById('sp3').textContent = t('step3');
+  // Upload section
+  const fieldLabels = document.querySelectorAll('.field-label');
+  if (fieldLabels[0]) fieldLabels[0].textContent = t('resumeLabel');
+  if (fieldLabels[1]) fieldLabels[1].textContent = t('jdLabel');
+  const dropMain = document.getElementById('drop-main');
+  if (dropMain && !dropMain.textContent.includes('✓')) dropMain.textContent = t('uploadMain');
+  const resumeTa = document.getElementById('resume-ta');
+  if (resumeTa) resumeTa.placeholder = t('resumePlaceholder');
+  const jdTa = document.getElementById('jd-ta');
+  if (jdTa) jdTa.placeholder = t('jdPlaceholder');
+  const dividerText = document.querySelector('.divider-text');
+  if (dividerText) dividerText.textContent = t('orPaste');
+  // Buttons
+  const analyzeBtn = document.getElementById('analyze-btn');
+  if (analyzeBtn) analyzeBtn.textContent = t('analyzeBtn');
+  const resetBtn = document.getElementById('reset-btn');
+  if (resetBtn) resetBtn.textContent = t('resetBtn');
+  // Tabs
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    const tabMap = {
+      overview: t('tabOverview'), bullets: t('tabBullets'),
+      keywords: t('tabKeywords'), ats: t('tabATS'),
+      gaps: t('tabGaps'), full: t('tabFull'), cover: t('tabCover')
+    };
+    if (tabMap[btn.dataset.tab]) btn.textContent = tabMap[btn.dataset.tab];
+  });
+  // Vault link
+  const vaultLink = document.querySelector('a[href="/vault.html"]');
+  if (vaultLink) vaultLink.textContent = t('myVault');
+  // Save HTML lang attribute
+  document.documentElement.lang = lang;
+}
+
+function toggleLang() {
+  currentLang = currentLang === 'en' ? 'es' : 'en';
+  localStorage.setItem('lang', currentLang);
+  applyLang();
+}
+
 // -- File input handler (called via onchange inline) ---------------------------
 function handleFileInput(input) {
   const file = input.files[0];
@@ -282,6 +393,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 // -- Buttons -------------------------------------------------------------------
 document.getElementById('analyze-btn').addEventListener('click', runAnalysis);
 document.getElementById('reset-btn').addEventListener('click', reset);
+applyLang(); // apply saved language on load
 
 // -- File reading --------------------------------------------------------------
 async function loadFile(file) {
@@ -404,7 +516,7 @@ async function runAnalysis() {
   let si = 0;
   const iv = setInterval(() => { if (si < steps.length) setP(...steps[si++]); }, 1800);
 
-  const prompt = `You are an expert resume optimizer and ATS specialist. Analyze the resume against the job description. Return ONLY valid JSON - no markdown fences, no extra text.
+  const prompt = `You are an expert resume optimizer and ATS specialist. ${t('aiLang')} Analyze the resume against the job description. Return ONLY valid JSON - no markdown fences, no extra text.
 
 RESUME:
 ${resume.slice(0, 6000)}
@@ -784,7 +896,7 @@ async function generateCoverLetter() {
     executive:     'executive, strategic, and leadership-focused'
   };
 
-  const prompt = `Write a compelling cover letter for a job application. Return ONLY the cover letter text - no explanation, no subject line, no markdown.
+  const prompt = `Write a compelling cover letter for a job application. ${t('aiLang')} Return ONLY the cover letter text - no explanation, no subject line, no markdown.
 
 CANDIDATE RESUME:
 ${resumeText.slice(0, 4000)}

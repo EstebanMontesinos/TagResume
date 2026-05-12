@@ -72,7 +72,10 @@
 <div class="shell">
   <div class="header">
     <h1>Resume <em>Vault</em></h1>
-    <a href="/" class="back-btn">← Back to Optimizer</a>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button onclick="toggleVaultLang()" id="vault-lang-btn" style="padding:7px 14px;background:var(--surface);border:1px solid var(--border-strong);border-radius:10px;font-size:12px;font-family:monospace;cursor:pointer;">🇪🇸 Español</button>
+      <a href="/" class="back-btn" id="back-btn">← Back to Optimizer</a>
+    </div>
   </div>
 
   <div id="vault-content">
@@ -83,6 +86,40 @@
 
 <script>
 function scoreClass(n) { return n >= 75 ? 'sc-green' : n >= 50 ? 'sc-amber' : 'sc-red'; }
+
+let vaultLang = localStorage.getItem('lang') || 'en';
+
+const VT = {
+  en: { title:'Resume Vault', back:'← Back to Optimizer', lang:'🇪🇸 Español',
+        loading:'Loading your vault...', empty:'No resumes saved yet.',
+        emptySub:'Optimize a resume and click "Save to Vault" to store it here.',
+        expand:'click any card to expand', copy:'Copy resume text',
+        download:'⬇ Download .txt', del:'Delete', copied:'Copied!',
+        deleted:'Deleted', confirmDel:'Delete this resume from the vault?' },
+  es: { title:'Bóveda de Currículums', back:'← Volver al Optimizador', lang:'🇺🇸 English',
+        loading:'Cargando tu bóveda...', empty:'No hay currículums guardados.',
+        emptySub:'Optimiza un currículum y haz clic en "Guardar en Bóveda".',
+        expand:'haz clic para expandir', copy:'Copiar texto del currículum',
+        download:'⬇ Descargar .txt', del:'Eliminar', copied:'¡Copiado!',
+        deleted:'Eliminado', confirmDel:'¿Eliminar este currículum de la bóveda?' }
+};
+
+function vt(k) { return VT[vaultLang][k] || VT.en[k]; }
+
+function applyVaultLang() {
+  document.querySelector('h1').innerHTML = vaultLang === 'es'
+    ? 'Bóveda de <em style="color:#1D9E75;font-style:italic;">Currículums</em>'
+    : 'Resume <em style="color:#1D9E75;font-style:italic;">Vault</em>';
+  document.getElementById('vault-lang-btn').textContent = vt('lang');
+  document.getElementById('back-btn').textContent = vt('back');
+}
+
+function toggleVaultLang() {
+  vaultLang = vaultLang === 'en' ? 'es' : 'en';
+  localStorage.setItem('lang', vaultLang);
+  applyVaultLang();
+  loadVault(); // re-render with new language
+}
 
 function formatDate(iso) {
   const d = new Date(iso);
@@ -205,6 +242,7 @@ async function loadVault() {
   }
 }
 
+applyVaultLang();
 loadVault();
 </script>
 </body>

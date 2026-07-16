@@ -206,7 +206,7 @@ app.post('/analyze', async (req, res) => {
 //   body          : 1.0 per 110 chars
 
 const LINES_PER_PAGE = 50;
-const TWO_PAGE_BUDGET = 75; // keepNext adds overhead — tighter budget compensates
+const TWO_PAGE_BUDGET = 70; // no mid-sentence cuts -- remove whole lines only
 
 const FOOTER_SECTIONS = ['EDUCATION','CERTIFICATIONS','LANGUAGES & AWARDS','LANGUAGES','AWARDS'];
 
@@ -259,22 +259,7 @@ function enforeTwoPages(text) {
     nonEmptyCount++;
   }
 
-  // Step 1: Shorten long lines (>120 chars) by trimming to sentence boundary
-  // This condenses without losing whole bullets
-  for (const item of mutable) {
-    if (item.protected || item.removed) continue;
-    const t = item.text.trim();
-    if (t.length > 130) {
-      // Cut at last comma or space before 120 chars
-      let cut = item.text.slice(0, 125);
-      const lastComma = cut.lastIndexOf(',');
-      const lastSpace = cut.lastIndexOf(' ');
-      const cutAt = lastComma > 90 ? lastComma : lastSpace;
-      item.text = item.text.slice(0, cutAt).trimEnd() + '.';
-    }
-  }
-
-  // Step 2: If still over budget, remove content lines bottom-up
+  // Remove content lines bottom-up
   // Skip: protected lines, section headers, job headers, blank lines
   // Priority: remove from oldest jobs (bottom) first, but NEVER the Skills section content
   let inSkills = false;
@@ -370,7 +355,7 @@ app.post('/trim-check', (req, res) => {
 app.post('/generate-docx', async (req, res) => {
   try {
     const { text: rawText } = req.body;
-    const text = enforeTwoPages(rawText); // hard enforce 2 pages
+    const text = rawText; // no trimming -- AI controls length
     const lines = text.split('\n');
     const FONT = 'Calibri';
     const COLOR_NAME = '1F3864';
@@ -496,7 +481,7 @@ app.post('/generate-docx', async (req, res) => {
 app.post('/generate-pdf', async (req, res) => {
   try {
     const { text: rawText } = req.body;
-    const text = enforeTwoPages(rawText); // hard enforce 2 pages
+    const text = rawText; // no trimming -- AI controls length
     const lines = text.split('\n');
     const doc = new PDFDocument({ margin: 56, size: 'LETTER' });
     res.setHeader('Content-Type', 'application/pdf');

@@ -1213,10 +1213,15 @@ ${jd.slice(0, 2000)}
 
 PARAMETERS:
 - Candidate name: ${name}
-- Company: ${company}
+- Target company: ${company}
 - Hiring manager: ${manager || 'Hiring Manager'}
 - Tone: ${toneMap[tone]}
 - Special emphasis: ${emphasis || 'none'}
+
+CRITICAL: The company you are writing this cover letter FOR is "${company}". 
+Ignore any other company names that appear in the resume text above — those 
+are past employers, not the target. Every reference to the target company 
+must use "${company}".
 
 RULES:
 - Max 4 paragraphs, max 350 words total

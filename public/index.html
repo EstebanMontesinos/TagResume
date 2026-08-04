@@ -137,7 +137,8 @@
     .gap-sug { font-size:12px; color:var(--text-muted); line-height:1.5; }
 
     /* Full resume */
-    .resume-pre { font-family:var(--mono); font-size:12px; line-height:1.85; white-space:pre-wrap; color:var(--text); background:#fafaf9; border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem 1.5rem; max-height:540px; overflow-y:auto; margin-bottom:10px; }
+    .resume-pre { font-family:var(--mono); font-size:12px; line-height:1.85; white-space:pre-wrap; color:var(--text); background:#fafaf9; border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem 1.5rem; max-height:540px; overflow-y:auto; margin-bottom:10px; cursor:text; }
+    .resume-pre:focus { outline:none; border-color:var(--accent-mid,#0F6E56); box-shadow:0 0 0 3px rgba(15,110,86,0.12); background:#fff; }
     .btn-row { display:flex; gap:8px; flex-wrap:wrap; }
     .reset-row { margin-top:2rem; padding-top:1.5rem; border-top:1px solid var(--border); }
 
@@ -178,7 +179,11 @@
     <span class="header-sub">ATS-ready · Achievement-focused · 2-page target</span>
     <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
       <button id="lang-toggle" onclick="toggleLang()" style="padding:7px 14px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);font-size:12px;font-family:var(--mono);color:var(--text);cursor:pointer;">🇪🇸 Español</button>
+            <a href="/analytics.html" style="padding:7px 14px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);font-size:12px;font-family:var(--mono);color:var(--text);text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;">📊 Analytics</a>
+      <a href="/jobs.html" style="padding:7px 14px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);font-size:12px;font-family:var(--mono);color:var(--text);text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;">📥 Jobs</a>
       <a href="/vault.html" style="padding:7px 14px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);font-size:12px;font-family:var(--mono);color:var(--text);text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;">🗄️ My Vault</a>
+      <a href="/tracker.html" style="padding:7px 14px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);font-size:12px;font-family:var(--mono);color:var(--text);text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;">📋 Tracker</a>
+      <a href="/profile.html" style="padding:7px 14px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);font-size:12px;font-family:var(--mono);color:var(--text);text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;">👤 Profile</a>
     </div>
   </div>
 
@@ -204,6 +209,11 @@
             onchange="handleFileInput(this)">
           <div style="font-size:11px;color:#6b6b6b;font-family:monospace;">PDF · DOCX · TXT</div>
           <div id="drop-name" style="display:none;margin-top:8px;font-size:12px;font-family:monospace;font-weight:500;"></div>
+        </div>
+        <div id="profile-resume-row" style="display:none;margin-bottom:8px;">
+          <select id="profile-resume-select" onchange="loadBaseResumeIntoTextarea()" style="width:100%;padding:8px 10px;border:1px solid rgba(0,0,0,0.22);border-radius:10px;font-size:12.5px;font-family:inherit;background:#fafafa;">
+            <option value="">— or load a saved base resume —</option>
+          </select>
         </div>
         <div class="divider-text">— or paste below —</div>
         <textarea id="resume-ta" rows="9" placeholder="Paste resume text here..."></textarea>
@@ -395,6 +405,66 @@ document.getElementById('analyze-btn').addEventListener('click', runAnalysis);
 document.getElementById('reset-btn').addEventListener('click', reset);
 applyLang(); // apply saved language on load
 
+// -- Load from Profile ---------------------------------------------------------
+let _profileBaseResumes = [];
+
+async function loadProfileBaseResumes() {
+  try {
+    const r = await fetch('/profile');
+    if (!r.ok) return; // profile feature is optional -- fail silently, don't block the app
+    const profile = await r.json();
+    _profileBaseResumes = profile.baseResumes || [];
+    const row = document.getElementById('profile-resume-row');
+    const select = document.getElementById('profile-resume-select');
+    if (!_profileBaseResumes.length) { row.style.display = 'none'; return; }
+    select.innerHTML = '<option value="">— or load a saved base resume —</option>' +
+      _profileBaseResumes.map(r => `<option value="${r.name}">${r.name} (${r.text.length.toLocaleString()} chars)</option>`).join('');
+    row.style.display = 'block';
+  } catch(e) {
+    // Non-fatal -- the app works fine via upload/paste without a saved profile.
+  }
+}
+
+let _loadedBaseResumeName = '';
+function loadBaseResumeIntoTextarea() {
+  const name = document.getElementById('profile-resume-select').value;
+  if (!name) return;
+  const match = _profileBaseResumes.find(r => r.name === name);
+  if (!match) return;
+  document.getElementById('resume-ta').value = match.text;
+  uploadedFileType = 'txt';
+  _loadedBaseResumeName = name; // remembered so Save-to-Tracker can tag this application with it
+  const dn = document.getElementById('drop-name');
+  dn.textContent = '✓ Loaded "' + name + '" from Profile';
+  dn.style.color = '#0F6E56';
+  dn.style.display = 'block';
+}
+
+loadProfileBaseResumes();
+
+// ── Job Inbox handoff ────────────────────────────────────────────────────────
+// jobs.html's "Start Tailoring" button stores the picked job here before
+// redirecting to this page, so the job description (and later, company/title
+// defaults for the Save-to-Tracker modal) carry over without re-pasting.
+let _handoffJob = null;
+(function consumeJobHandoff() {
+  try {
+    const raw = localStorage.getItem('handoffJob');
+    if (!raw) return;
+    localStorage.removeItem('handoffJob');
+    _handoffJob = JSON.parse(raw);
+    if (_handoffJob.jobDescription) {
+      document.getElementById('jd-ta').value = _handoffJob.jobDescription;
+    }
+    const dn = document.getElementById('drop-name');
+    if (dn) {
+      dn.textContent = '✓ Loaded job description from ' + (_handoffJob.company || 'Job Inbox');
+      dn.style.color = '#185FA5';
+      dn.style.display = 'block';
+    }
+  } catch(e) { /* stale/invalid handoff payload -- ignore */ }
+})();
+
 // -- File reading --------------------------------------------------------------
 async function loadFile(file) {
   uploadedFileType = file.name.split('.').pop().toLowerCase();
@@ -471,6 +541,210 @@ function sanitizeJSON(str) {
     result += ch;
   }
   return result;
+}
+
+// -- Section-completeness safety net --------------------------------------
+// The AI is instructed never to drop EDUCATION/CERTIFICATIONS/LANGUAGES &
+// AWARDS content, but prompt instructions are not 100% reliable -- in
+// testing the model still sometimes returned one of these sections with a
+// header and no content underneath, silently losing real, verified
+// candidate facts. Rather than relying on wording alone, we verify the
+// AI's output against the original resume and deterministically restore
+// any footer section it dropped, splicing back the user's own original
+// text unchanged (never inventing anything).
+// NOTE: keep this header list in sync with SECTION_HEADERS in
+// lib/resume-line-parser.js on the server if that list changes.
+const SECTION_HEADER_NAMES = ['PROFESSIONAL SUMMARY','EXPERIENCE','SKILLS','EDUCATION',
+  'CERTIFICATIONS','LANGUAGES & AWARDS','LANGUAGES','AWARDS',
+  'SUMMARY','WORK EXPERIENCE','TECHNICAL SKILLS','PROJECTS'];
+
+function splitIntoSections(text) {
+  const lines = (text || '').split('\n');
+  const sections = [];
+  let current = null;
+  for (const line of lines) {
+    const upper = line.trim().toUpperCase();
+    const matchedHeader = SECTION_HEADER_NAMES.find(h => upper === h || upper.startsWith(h + ' '));
+    if (matchedHeader) {
+      current = { name: matchedHeader, headerLine: line, bodyLines: [] };
+      sections.push(current);
+    } else if (current) {
+      current.bodyLines.push(line);
+    }
+  }
+  return sections;
+}
+
+function isSectionBodyEmpty(bodyLines) {
+  return bodyLines.every(l => !l.trim());
+}
+
+function escapeForRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Returns { text, notes } -- text is the (possibly repaired) optimized
+// resume, notes describes anything that was restored so it can be surfaced
+// to the user instead of silently patched.
+function restoreDroppedSections(originalText, optimizedText) {
+  const RESTORABLE = ['EDUCATION', 'CERTIFICATIONS', 'LANGUAGES & AWARDS', 'LANGUAGES', 'AWARDS'];
+  const originalSections = splitIntoSections(originalText);
+  const optimizedSections = splitIntoSections(optimizedText);
+  const notes = [];
+  let result = optimizedText;
+
+  for (const name of RESTORABLE) {
+    const origSec = originalSections.find(s => s.name === name);
+    if (!origSec || isSectionBodyEmpty(origSec.bodyLines)) continue; // nothing to restore
+
+    const optSec = optimizedSections.find(s => s.name === name);
+    if (optSec && !isSectionBodyEmpty(optSec.bodyLines)) continue; // AI already kept it, don't touch
+
+    const origBody = origSec.bodyLines.filter(l => l.trim()).join('\n');
+
+    if (optSec) {
+      // Header survived but the AI dropped the content underneath it.
+      const headerRegex = new RegExp('(^|\n)(' + escapeForRegex(optSec.headerLine) + ')(\n|$)');
+      result = result.replace(headerRegex, (m, p1, p2, p3) => `${p1}${p2}\n${origBody}${p3}`);
+    } else {
+      // The AI dropped the entire section, header included.
+      result = result.trim() + `\n\n${origSec.headerLine}\n${origBody}`;
+    }
+    notes.push(`Restored ${name} — the AI omitted this section; your original, unedited content was added back.`);
+  }
+
+  return { text: result, notes };
+}
+
+// -- Bullet-count safety net -----------------------------------------------
+// The prompt asks for a minimum bullet count per job by recency tier, but
+// (like the section-completeness rule above) that instruction is not
+// always followed exactly -- older-but-real roles sometimes get collapsed
+// to a single bullet even when the user's original resume has 2-3 more
+// truthful, already-written bullets available for that same job. Rather
+// than only tweaking prompt wording again, we verify the tailored output
+// against the original resume and top up any under-filled job with
+// verbatim bullets pulled from the source text (never inventing content).
+function isJobHeaderLine(line) {
+  return !(/^[\s]*[•\-\*]/.test(line)) &&
+    (/\d{4}\s*[–\-]\s*(\d{4}|Present)/i.test(line) || line.includes(' | '));
+}
+function isBulletLine(line) {
+  return /^[\s]*[•\-\*]\s/.test(line);
+}
+
+// Splits text into ordered job blocks: [{ headerLine, bulletLines: [] }].
+// Only used against the AI's OWN output, which reliably follows the
+// "Company | Title  Date" header format the prompt's JSON schema requires --
+// NOT against the user's original resume, whose formatting we don't
+// control (see findOriginalJobBullets below for why that needs a
+// different, more forgiving approach).
+function extractJobBlocks(text) {
+  const lines = (text || '').split('\n');
+  const jobs = [];
+  let current = null;
+  for (const line of lines) {
+    if (isJobHeaderLine(line)) {
+      current = { headerLine: line, bulletLines: [] };
+      jobs.push(current);
+    } else if (current && isBulletLine(line)) {
+      current.bulletLines.push(line);
+    }
+  }
+  return jobs;
+}
+
+function bulletCoreText(bulletLine) {
+  return bulletLine.replace(/^[\s]*[•\-\*]\s*/, '').trim().toLowerCase();
+}
+
+function normalizeBulletMarker(bulletLine) {
+  return bulletLine.replace(/^[\s]*[•\-\*]\s*/, '• ');
+}
+
+// The company name is the one thing guaranteed to appear identically in
+// both the original resume and the AI's tailored output (the prompt
+// explicitly requires preserving company names). Everything else about a
+// job header -- date format, separators, tabs vs. spaces -- varies by
+// resume and isn't something we can reliably regex-match against the
+// user's original text.
+function extractCompanyToken(headerLine) {
+  const pipeIdx = headerLine.indexOf('|');
+  const raw = pipeIdx > -1 ? headerLine.slice(0, pipeIdx) : headerLine;
+  return raw.replace(/[*_`]/g, '').trim();
+}
+
+// Finds the bullets belonging to a job in the ORIGINAL resume by locating
+// the line containing that job's company name, then collecting bullet
+// lines until the next job's company name or a section header appears.
+// This does not require the original resume's job headers to match any
+// particular date/format pattern -- only that the company name string is
+// present, which the prompt's own rules already guarantee stays unchanged.
+function findOriginalJobBullets(originalLines, companyToken, allCompanyTokens) {
+  if (!companyToken) return [];
+  const lowerToken = companyToken.toLowerCase();
+  const startIdx = originalLines.findIndex(l => l.toLowerCase().includes(lowerToken));
+  if (startIdx === -1) return [];
+
+  const otherTokens = allCompanyTokens.filter(t => t !== companyToken).map(t => t.toLowerCase());
+  const bullets = [];
+  for (let i = startIdx + 1; i < originalLines.length; i++) {
+    const line = originalLines[i];
+    const upper = line.trim().toUpperCase();
+    if (otherTokens.some(t => t && line.toLowerCase().includes(t))) break; // hit the next job
+    if (SECTION_HEADER_NAMES.some(h => upper === h || upper.startsWith(h + ' '))) break;
+    if (isBulletLine(line)) bullets.push(line);
+  }
+  return bullets;
+}
+
+// Most recent 2 jobs -> 4 bullets, 3rd/4th most recent -> 3, everything
+// older -> 2. Mirrors the tiers in the /analyze prompt above.
+function tierMinimumForIndex(idx) {
+  if (idx < 2) return 4;
+  if (idx < 4) return 3;
+  return 2;
+}
+
+function topUpThinBullets(originalText, optimizedText) {
+  const optJobs = extractJobBlocks(optimizedText);
+  const originalLines = (originalText || '').split('\n');
+  const companyTokens = optJobs.map(j => extractCompanyToken(j.headerLine));
+  const notes = [];
+  let result = optimizedText;
+
+  optJobs.forEach((job, idx) => {
+    const companyToken = companyTokens[idx];
+    const origBullets = findOriginalJobBullets(originalLines, companyToken, companyTokens);
+    if (origBullets.length === 0) return; // no matching original content -- don't invent
+
+    const minBullets = tierMinimumForIndex(idx);
+    if (job.bulletLines.length >= minBullets) return;
+
+    const existingCores = job.bulletLines.map(bulletCoreText);
+    const candidates = origBullets.filter(b => {
+      const core = bulletCoreText(b);
+      // Skip original bullets that look like they're already represented
+      // (rewritten) among this job's current optimized bullets.
+      return !existingCores.some(ec =>
+        ec.slice(0, 25) && (ec.includes(core.slice(0, 25)) || core.includes(ec.slice(0, 25)))
+      );
+    });
+
+    const needed = Math.min(minBullets, origBullets.length) - job.bulletLines.length;
+    if (needed <= 0 || candidates.length === 0) return;
+    const toAdd = candidates.slice(0, needed).map(normalizeBulletMarker);
+
+    const lastBullet = job.bulletLines[job.bulletLines.length - 1];
+    const anchorLine = lastBullet || job.headerLine;
+    const anchorEsc = escapeForRegex(anchorLine);
+    const re = new RegExp('(' + anchorEsc + ')(\n|$)');
+    result = result.replace(re, (m, p1, p2) => `${p1}\n${toAdd.join('\n')}${p2}`);
+
+    notes.push(`Added ${toAdd.length} bullet(s) to "${job.headerLine.trim()}" from your original resume — this role looked under-filled; nothing invented, only reused unchanged from your source text.`);
+  });
+
+  return { text: result, notes };
 }
 
 function reset() {
@@ -553,23 +827,26 @@ Rules:
 - Exactly 15 keywords from the JD
 - Flag any title mismatch as HIGH severity
 - Keep all original sections in the same order
-- TARGET LENGTH: The optimized_resume must fit within 2 Word pages when printed at Calibri 11pt with 0.7 inch margins. A Word page fits roughly 46 lines. 2 pages = ~92 lines max. COUNT YOUR LINES before finalizing. Follow these strict rules:
+- NEVER omit a section's real content. If the source resume has content under EDUCATION, CERTIFICATIONS, or LANGUAGES & AWARDS, that content MUST be carried into optimized_resume under its header, using the source resume's actual facts (institution, degree, honors, certs, languages). A section header with nothing beneath it is always wrong - never produce one.
+- TARGET LENGTH: The optimized_resume should USE the full 2 Word pages available (Calibri 11pt, 0.7" margins, ~46 lines/page, ~92 lines for 2 pages). A 1-page resume when the candidate has 2 pages of real, verifiable experience to show is a missed opportunity, not a success - every unused line is a chance to demonstrate more of their actual accomplishments. Aim for 80-92 lines. COUNT YOUR LINES before finalizing. Follow these rules:
   * Name: 1 line
   * Title: 1 line
   * Contact: 1 line
   * Blank line: 1 line
-  * PROFESSIONAL SUMMARY section header: 1 line, summary text: max 3 lines
+  * PROFESSIONAL SUMMARY section header: 1 line, summary text: 2-3 lines
   * Each EXPERIENCE section header: 1 line
   * Each job header: 1 line
-  * Most recent 2 jobs: exactly 4 bullets, each bullet max 1 line (under 110 chars)
-  * Jobs 3+ years ago: exactly 2 bullets each, each bullet max 1 line (under 110 chars)
-  * Jobs 5+ years ago: exactly 1 bullet each, under 100 chars
+  * Most recent 2 jobs: exactly 4 bullets each, each bullet max 1 line (under 110 chars)
+  * 3rd and 4th most recent jobs (by order in the resume, not absolute calendar age): exactly 3 bullets each, each bullet max 1 line (under 110 chars)
+  * Any remaining older jobs: exactly 2 bullets each (never fewer than 2, unless that role lasted under 3 months), under 100 chars each
   * Include ALL jobs - never drop any job entry
-  * SKILLS: exactly 4 single-line categories, each under 100 chars
-  * EDUCATION, CERTIFICATIONS, LANGUAGES & AWARDS: keep compact, 1 line each
+  * SKILLS: 4-5 single-line categories, each under 100 chars
+  * EDUCATION: institution and degree/honors exactly as given in the source resume, 1-2 lines - never leave this section empty if the source resume has education info
+  * CERTIFICATIONS, LANGUAGES & AWARDS: keep compact but complete, 1 line each, using the source resume's actual content
   * Use bullet points (•) only - never paragraph style
-  * If you are over 92 lines, remove bullets from oldest jobs first until you fit
-  * List what you removed in trimmed_content
+  * If you land UNDER 80 lines, you are leaving real experience unused: add back bullets for older jobs (up to 3 each) using only facts already present in the source resume - never invent new accomplishments or numbers
+  * If you are over 92 lines, remove bullets from the least-relevant/oldest jobs first until you fit, but never drop below 2 bullets for any job
+  * List what you removed OR added back in trimmed_content
 - SKILLS SECTION: Rewrite into compact single-line categories formatted as "Category: skill · skill · skill". Keep max 4-5 categories total. Only include skills that are genuinely relevant to this specific JD - do not pad. Add gap skills that fit naturally. Each line max 110 characters. Most relevant category goes first.`;
 
   try {
@@ -589,6 +866,19 @@ Rules:
     raw = raw.replace(/^```json\s*/,'').replace(/^```/,'').replace(/```$/,'').trim();
     raw = sanitizeJSON(raw);
     const result = JSON.parse(raw);
+
+    // Deterministic safety net: verify the AI didn't silently drop
+    // EDUCATION/CERTIFICATIONS/LANGUAGES & AWARDS content, and repair it
+    // from the user's own original resume text if it did.
+    const normalizedOptimized = (result.optimized_resume || '').replace(/\\n/g, '\n');
+    const sectionRepair = restoreDroppedSections(resume, normalizedOptimized);
+    const bulletRepair = topUpThinBullets(resume, sectionRepair.text);
+    result.optimized_resume = bulletRepair.text;
+    const repairNotes = sectionRepair.notes.concat(bulletRepair.notes);
+    if (repairNotes.length) {
+      result.trimmed_content = (result.trimmed_content || []).concat(repairNotes);
+    }
+
     _vaultData = result; // cache for vault save
 
     setP(100, 'Done!');
@@ -737,8 +1027,11 @@ function renderGaps(d) {
       </div>`;}).join('')||'<p style="font-size:13px;color:var(--text-muted)">No significant gaps detected!</p>'}`;
 }
 
+let _optOriginalText = '';
+
 function renderFull(d) {
   const raw = (d.optimized_resume||'').replace(/\\n/g,'\n');
+  _optOriginalText = raw;
   const fmt = uploadedFileType;
   const phCount = (raw.match(/\[PLACEHOLDER:/g) || []).length;
 
@@ -753,17 +1046,19 @@ function renderFull(d) {
       ${phCount ? '<span class="badge badge-amber">'+phCount+' gap placeholder'+(phCount>1?'s':'')+'</span>' : ''}
     </div>
     <div style="background:#E1F5EE;border:1px solid #9FE1CB;border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;font-size:12px;font-family:var(--mono);color:var(--accent-mid);">
-      ${fmt==='docx'?'📘':fmt==='pdf'?'📕':'📄'} Download will produce a <strong>.${fmt}</strong> file matching your original format.
+      ${fmt==='docx'?'📘':fmt==='pdf'?'📕':'📄'} Download will produce a <strong>.${fmt}</strong> file matching your original format. ✏️ Click into the resume below to edit or tweak anything before downloading.
     </div>
     ${phCount ? `<div style="background:#FAEEDA;border:1px solid #FAC775;border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:12px;line-height:1.6;color:#7A4E0A;">
       <strong>⚠️ `+phCount+` gap placeholder`+(phCount>1?'s are':' is')+` highlighted in amber.</strong>
       These are preparation guides - fill them in as you gain the experience, then remove the [PLACEHOLDER: ] wrapper before submitting your resume.
     </div>` : ''}
-    <div class="resume-pre" id="opt-pre">${highlighted}</div>
+    <div class="resume-pre" id="opt-pre" contenteditable="true" spellcheck="false">${highlighted}</div>
     <div class="btn-row" style="margin-top:10px;">
       <button class="btn-secondary" id="copy-btn">Copy text</button>
       <button class="btn-accent" id="dl-btn">&#11015; Download .${fmt}</button>
       <button class="btn-secondary" id="save-vault-btn" style="border-color:#9FE1CB;color:#0F6E56;" onclick="showSaveVaultModal()">🗄️ Save to Vault</button>
+      <button class="btn-secondary" id="save-tracker-btn" style="border-color:#9FBEE1;color:#185FA5;" onclick="showSaveTrackerModal()">📋 Save to Tracker</button>
+      <button class="btn-secondary" id="reset-opt-btn" title="Revert to the AI-generated version, discarding your edits">↺ Reset edits</button>
     </div>
     <div id="dl-err" style="display:none;margin-top:8px;font-size:12px;color:var(--danger);font-family:var(--mono);"></div>
     <div id="vault-success" style="display:none;margin-top:8px;padding:8px 12px;background:#E1F5EE;border:1px solid #9FE1CB;border-radius:var(--radius);font-size:12px;color:#0F6E56;font-family:var(--mono);"></div>`;
@@ -773,6 +1068,10 @@ function renderFull(d) {
       .then(() => { this.textContent = 'Copied!'; setTimeout(() => { this.textContent = 'Copy text'; }, 2000); });
   });
   document.getElementById('dl-btn').addEventListener('click', downloadFormatted);
+  document.getElementById('reset-opt-btn').addEventListener('click', function() {
+    if (!confirm('Discard your edits and restore the AI-generated resume text?')) return;
+    renderFull(d);
+  });
 }
 
 async function downloadFormatted() {
@@ -1058,6 +1357,121 @@ async function saveToVault() {
     const successEl = document.getElementById('vault-success');
     if (successEl) {
       successEl.textContent = '✓ Saved to vault for ' + company + '. View it anytime in My Vault before your interview.';
+      successEl.style.display = 'block';
+    }
+  } catch(e) {
+    errEl.textContent = 'Error: ' + e.message; errEl.style.display = 'block';
+  }
+}
+
+// -- Tracker -------------------------------------------------------------------
+function showSaveTrackerModal() {
+  let modal = document.getElementById('tracker-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'tracker-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:1rem;';
+    modal.innerHTML = `
+      <div style="background:white;border-radius:var(--radius-lg);padding:2rem;width:100%;max-width:460px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto;">
+        <div style="font-family:var(--serif);font-size:22px;margin-bottom:6px;">Save to <em style="color:#185FA5;font-style:italic;">Tracker</em></div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:1.5rem;">Track this application's status from here through offer or rejection.</p>
+        <div style="margin-bottom:12px;">
+          <label style="display:block;font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:5px;">Company Name *</label>
+          <input id="tracker-company" type="text" placeholder="e.g. Google, Stripe, Anthropic..." style="width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,0.2);border-radius:var(--radius);font-size:14px;font-family:var(--sans);outline:none;">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="display:block;font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:5px;">Job Title</label>
+          <input id="tracker-jobtitle" type="text" placeholder="e.g. Engineering Manager" style="width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,0.2);border-radius:var(--radius);font-size:14px;font-family:var(--sans);outline:none;">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="display:block;font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:5px;">Job URL</label>
+          <input id="tracker-joburl" type="text" placeholder="https://..." style="width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,0.2);border-radius:var(--radius);font-size:14px;font-family:var(--sans);outline:none;">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="display:block;font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:5px;">Resume variant (optional)</label>
+          <input id="tracker-resumevariant" type="text" placeholder="e.g. Consultant, PM, Software Engineer..." style="width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,0.2);border-radius:var(--radius);font-size:14px;font-family:var(--sans);outline:none;">
+          <p style="font-size:11px;color:var(--text-muted);margin-top:4px;">Tag which resume version this is so Analytics can show you which one actually gets responses.</p>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.5rem;">
+          <div>
+            <label style="display:block;font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:5px;">Source</label>
+            <select id="tracker-source" style="width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,0.2);border-radius:var(--radius);font-size:14px;font-family:var(--sans);">
+              <option value="">Select...</option>
+              <option>LinkedIn</option><option>Indeed</option><option>Glassdoor</option>
+              <option>Company site</option><option>Referral</option><option>Other</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:5px;">Status</label>
+            <select id="tracker-status" style="width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,0.2);border-radius:var(--radius);font-size:14px;font-family:var(--sans);">
+              <option value="Saved">Saved</option>
+              <option value="Applied">Applied</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="saveToTracker()" style="flex:1;padding:11px;background:#185FA5;color:white;border:none;border-radius:var(--radius);font-size:14px;font-weight:500;font-family:var(--sans);cursor:pointer;">Save Application</button>
+          <button onclick="document.getElementById('tracker-modal').remove()" style="padding:11px 16px;background:white;border:1px solid rgba(0,0,0,0.2);border-radius:var(--radius);font-size:14px;font-family:var(--sans);cursor:pointer;">Cancel</button>
+        </div>
+        <div id="tracker-modal-err" style="display:none;margin-top:8px;font-size:12px;color:#A32D2D;font-family:var(--mono);"></div>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  }
+  document.getElementById('tracker-modal').style.display = 'flex';
+  if (_handoffJob) {
+    const companyEl = document.getElementById('tracker-company');
+    const titleEl = document.getElementById('tracker-jobtitle');
+    if (companyEl && !companyEl.value) companyEl.value = _handoffJob.company || '';
+    if (titleEl && !titleEl.value) titleEl.value = _handoffJob.jobTitle || '';
+  }
+  const variantEl = document.getElementById('tracker-resumevariant');
+  if (variantEl && !variantEl.value) variantEl.value = _loadedBaseResumeName || '';
+  document.getElementById('tracker-company').focus();
+}
+
+async function saveToTracker() {
+  const company    = document.getElementById('tracker-company').value.trim();
+  const jobTitle   = document.getElementById('tracker-jobtitle').value.trim();
+  const jobUrl     = document.getElementById('tracker-joburl').value.trim();
+  const source     = document.getElementById('tracker-source').value;
+  const status     = document.getElementById('tracker-status').value;
+  const errEl      = document.getElementById('tracker-modal-err');
+  errEl.style.display = 'none';
+
+  if (!company) { errEl.textContent = 'Please enter a company name.'; errEl.style.display = 'block'; return; }
+
+  const resumeText = document.getElementById('opt-pre') ? document.getElementById('opt-pre').innerText : '';
+  const jobDescription = document.getElementById('jd-ta') ? document.getElementById('jd-ta').value : '';
+  const coverLetterEl = document.getElementById('cl-text');
+  const coverLetterText = (coverLetterEl && coverLetterEl.textContent.trim()) ? coverLetterEl.textContent : '';
+
+  const resumeVariant = document.getElementById('tracker-resumevariant') ? document.getElementById('tracker-resumevariant').value.trim() : '';
+
+  const payload = {
+    company, jobTitle, jobUrl, source, status,
+    resumeText, jobDescription, coverLetterText, resumeVariant,
+    matchScore: _vaultData && _vaultData.scores ? _vaultData.scores.overall : null,
+    atsScore: _vaultData && _vaultData.scores ? _vaultData.scores.ats : null,
+    // Lineage back to the Job Inbox entry (if this application started from
+    // a "Start Tailoring" handoff) -- see docs/semi-automated-submission-options.md
+    // context and the Jobs<->Applications linking work for why this is kept
+    // separate from matchScore above rather than overwriting it.
+    sourceJobId: _handoffJob ? (_handoffJob.jobId || null) : null,
+    sourceMatchScore: _handoffJob ? (_handoffJob.sourceMatchScore || null) : null
+  };
+
+  try {
+    const resp = await fetch('/applications/save', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Save failed');
+
+    document.getElementById('tracker-modal').remove();
+    const successEl = document.getElementById('vault-success');
+    if (successEl) {
+      successEl.textContent = '✓ Added to tracker for ' + company + '. View and update its status anytime in the Tracker.';
       successEl.style.display = 'block';
     }
   } catch(e) {

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Job Inbox</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --accent:#1D9E75; --accent-light:#E1F5EE; --accent-mid:#0F6E56;
+      --danger:#A32D2D; --danger-light:#FCEBEB;
+      --warn:#9A6B12; --warn-light:#FBF1DD;
+      --info:#185FA5; --info-light:#E6F1FB;
+      --bg:#f9f9f8; --surface:#fff;
+      --border:rgba(0,0,0,0.1); --border-strong:rgba(0,0,0,0.2);
+      --text:#1a1a1a; --muted:#6b6b6b;
+      --radius:10px; --sans:'DM Sans',sans-serif; --mono:'DM Mono',monospace; --serif:'Instrument Serif',serif;
+    }
+    body { font-family:var(--sans); background:var(--bg); color:var(--text); min-height:100vh; }
+    .shell { max-width:900px; margin:0 auto; padding:2.5rem 1.5rem 4rem; }
+
+    .header { display:flex; align-items:center; justify-content:space-between; margin-bottom:2rem; padding-bottom:1.5rem; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:12px; }
+    .header h1 { font-family:var(--serif); font-size:26px; font-weight:400; }
+    .header h1 em { color:var(--accent); font-style:italic; }
+    .back-btn { padding:8px 16px; background:var(--surface); border:1px solid var(--border-strong); border-radius:var(--radius); font-size:13px; font-family:var(--sans); cursor:pointer; color:var(--text); text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+    .back-btn:hover { background:#f0f0ef; }
+
+    .section { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem; margin-bottom:1.25rem; }
+    .section-title { font-size:15px; font-weight:500; margin-bottom:4px; }
+    .section-sub { font-size:12px; color:var(--muted); margin-bottom:1rem; line-height:1.6; }
+
+    .field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+    @media(max-width:600px){ .field-row{ grid-template-columns:1fr; } }
+    .mini-lbl { font-size:10px; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:5px; display:block; }
+    input[type=text], textarea, select {
+      width:100%; padding:9px 11px; border:1px solid var(--border-strong); border-radius:var(--radius);
+      font-family:var(--sans); font-size:13px; background:var(--surface); color:var(--text);
+    }
+    textarea { font-family:var(--mono); font-size:12px; line-height:1.6; resize:vertical; min-height:90px; }
+
+    .btn-primary { padding:10px 18px; background:var(--accent); color:white; border:none; border-radius:var(--radius); font-size:13px; font-family:var(--sans); cursor:pointer; }
+    .btn-primary:hover { background:var(--accent-mid); }
+    .btn-primary:disabled { opacity:0.55; cursor:default; }
+    .btn-sec { padding:9px 16px; background:var(--surface); color:var(--text); border:1px solid var(--border-strong); border-radius:var(--radius); font-size:13px; font-family:var(--sans); cursor:pointer; }
+    .btn-sec:hover { background:#f0f0ef; }
+    .btn-danger { padding:7px 12px; background:var(--surface); color:var(--danger); border:1px solid #F09595; border-radius:var(--radius); font-size:12px; font-family:var(--sans); cursor:pointer; }
+    .btn-danger:hover { background:var(--danger-light); }
+
+    .add-job-box { border:1.5px dashed var(--border-strong); border-radius:var(--radius); padding:14px; }
+    .save-status { font-size:11px; font-family:var(--mono); color:var(--accent-mid); margin-top:8px; height:14px; }
+    .empty-note { font-size:12.5px; color:var(--muted); text-align:center; padding:1.5rem; }
+
+    .filter-chips { display:flex; gap:6px; margin-bottom:1rem; flex-wrap:wrap; }
+    .chip { padding:6px 12px; border:1px solid var(--border-strong); border-radius:20px; font-size:12px; cursor:pointer; background:var(--surface); }
+    .chip.active { background:var(--text); color:white; border-color:var(--text); }
+
+    .job-card { border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-bottom:10px; }
+    .job-card-header { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; cursor:pointer; }
+    .job-title { font-size:14px; font-weight:500; }
+    .job-company { font-size:12.5px; color:var(--muted); }
+    .job-meta { font-size:11px; font-family:var(--mono); color:var(--muted); margin-top:4px; }
+
+    .status-pill { font-size:11px; font-family:var(--mono); padding:3px 9px; border-radius:20px; white-space:nowrap; }
+    .status-New { background:var(--info-light); color:var(--info); }
+    .status-Reviewed { background:#eee; color:#555; }
+    .status-Skipped { background:var(--danger-light); color:var(--danger); }
+    .status-Sent\ to\ Optimizer { background:var(--accent-light); color:var(--accent-mid); }
+
+    .score-chip { font-size:11px; font-family:var(--mono); padding:3px 9px; border-radius:20px; font-weight:500; }
+    .rec-apply { background:var(--accent-light); color:var(--accent-mid); }
+    .rec-review { background:var(--warn-light); color:var(--warn); }
+    .rec-skip { background:var(--danger-light); color:var(--danger); }
+
+    .job-body { margin-top:12px; padding-top:12px; border-top:1px solid var(--border); display:none; }
+    .job-body.open { display:block; }
+    .jd-text { font-family:var(--mono); font-size:11.5px; line-height:1.6; white-space:pre-wrap; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:10px; max-height:220px; overflow:auto; margin-bottom:10px; }
+
+    .score-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; margin-bottom:10px; }
+    .score-box { border:1px solid var(--border); border-radius:var(--radius); padding:8px 10px; }
+    .score-box .num { font-family:var(--mono); font-size:18px; font-weight:500; }
+    .score-box .lbl { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.03em; }
+    .explanation { font-size:12.5px; line-height:1.6; color:var(--text); background:var(--bg); border-radius:var(--radius); padding:10px; margin-bottom:10px; }
+
+    .job-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    select.status-select { width:auto; display:inline-block; font-size:12px; padding:6px 8px; }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <div class="header">
+    <h1>Job <em>Inbox</em></h1>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <a href="/analytics.html" class="back-btn">📊 Analytics</a>
+      <a href="/profile.html" class="back-btn">👤 Profile</a>
+      <a href="/tracker.html" class="back-btn">📋 Tracker</a>
+      <a href="/vault.html" class="back-btn">🗄️ Vault</a>
+      <a href="/" class="back-btn">← Back to Optimizer</a>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Add a Job</div>
+    <div class="section-sub">Capture a job before spending any tailoring effort on it. Score it against your Profile to see if it's worth pursuing.</div>
+    <div class="add-job-box">
+      <div class="field-row">
+        <div><label class="mini-lbl">Company *</label><input type="text" id="new-company"></div>
+        <div><label class="mini-lbl">Job title *</label><input type="text" id="new-title"></div>
+      </div>
+      <div class="field-row">
+        <div><label class="mini-lbl">Job URL</label><input type="text" id="new-url" placeholder="https://..."></div>
+        <div><label class="mini-lbl">Source</label><input type="text" id="new-source" placeholder="e.g. LinkedIn, referral, company site"></div>
+      </div>
+      <div class="field-row">
+        <div><label class="mini-lbl">Location</label><input type="text" id="new-location"></div>
+        <div><label class="mini-lbl">Work mode</label><input type="text" id="new-workMode" placeholder="Remote / Hybrid / Onsite"></div>
+      </div>
+      <label class="mini-lbl">Job description *</label>
+      <textarea id="new-description" placeholder="Paste the full job description..." style="min-height:140px;margin-bottom:10px;"></textarea>
+      <button class="btn-primary" onclick="addJob()">Save Job</button>
+      <div class="save-status" id="add-job-status"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Jobs</div>
+    <div class="filter-chips" id="filter-chips"></div>
+    <div id="job-list"></div>
+  </div>
+</div>
+
+<script>
+let jobs = [];
+let activeFilter = 'All';
+const STATUSES = ['New', 'Reviewed', 'Skipped', 'Sent to Optimizer'];
+
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+// Only allow http(s) links to render as a real href -- rejects javascript:/data:/etc.
+// URIs so a pasted job URL can never execute script when "Open posting" is clicked.
+function safeHref(u) {
+  const s = (u || '').trim();
+  if (/^https?:\/\//i.test(s)) return s;
+  return '#';
+}
+
+async function loadJobs() {
+  try {
+    const r = await fetch('/jobs/list');
+    jobs = await r.json();
+    renderFilterChips();
+    renderJobList();
+  } catch(e) {
+    document.getElementById('job-list').innerHTML =
+      `<div style="color:var(--danger);font-size:13px;font-family:var(--mono);">Could not load jobs: ${e.message}</div>`;
+  }
+}
+
+function renderFilterChips() {
+  const counts = { All: jobs.length };
+  STATUSES.forEach(s => counts[s] = jobs.filter(j => j.status === s).length);
+  const el = document.getElementById('filter-chips');
+  el.innerHTML = ['All', ...STATUSES].map(s =>
+    `<div class="chip ${s === activeFilter ? 'active' : ''}" onclick="setFilter('${s}')">${esc(s)} (${counts[s] || 0})</div>`
+  ).join('');
+}
+
+function setFilter(s) { activeFilter = s; renderFilterChips(); renderJobList(); }
+
+function recClass(rec) {
+  if (rec === 'apply') return 'rec-apply';
+  if (rec === 'skip') return 'rec-skip';
+  return 'rec-review';
+}
+
+function renderJobList() {
+  const list = activeFilter === 'All' ? jobs : jobs.filter(j => j.status === activeFilter);
+  const el = document.getElementById('job-list');
+  if (!list.length) {
+    el.innerHTML = `<div class="empty-note">No jobs here yet — add one above.</div>`;
+    return;
+  }
+  el.innerHTML = list.map(j => {
+    const ms = j.matchScore;
+    return `
+    <div class="job-card" id="card-${j.id}">
+      <div class="job-card-header" onclick="toggleCard('${j.id}')">
+        <div>
+          <div class="job-title">${esc(j.title)}</div>
+          <div class="job-company">${esc(j.company)}${j.location ? ' · ' + esc(j.location) : ''}</div>
+          <div class="job-meta">${new Date(j.createdAt).toLocaleDateString()}${j.source ? ' · ' + esc(j.source) : ''}</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap;justify-content:flex-end;">
+          ${ms ? `<div class="score-chip ${recClass(ms.recommendation)}">${ms.overall} · ${esc(ms.recommendation)}</div>` : ''}
+          <div class="status-pill status-${j.status.replace(/ /g,'\\ ')}">${esc(j.status)}</div>
+        </div>
+      </div>
+      <div class="job-body" id="body-${j.id}"></div>
+    </div>
+  `;
+  }).join('');
+}
+
+async function toggleCard(id) {
+  const bodyEl = document.getElementById('body-' + id);
+  const isOpen = bodyEl.classList.contains('open');
+  if (isOpen) { bodyEl.classList.remove('open'); return; }
+
+  bodyEl.classList.add('open');
+  bodyEl.innerHTML = `<div class="empty-note">Loading...</div>`;
+  try {
+    const r = await fetch('/jobs/' + id);
+    const job = await r.json();
+    bodyEl.innerHTML = jobDetailHTML(job);
+    loadLinkedApplication(id); // fire-and-forget, fills in #linked-app-<id> once resolved
+  } catch(e) {
+    bodyEl.innerHTML = `<div style="color:var(--danger);font-size:12px;">Failed to load: ${e.message}</div>`;
+  }
+}
+
+// Reverse lookup: does this job already have a Tracker application linked to
+// it (via sourceJobId, set when you click "Start Tailoring")? Kept as its own
+// on-demand fetch rather than baked into /jobs/list so the list endpoint
+// doesn't have to join against the applications collection for every job.
+async function loadLinkedApplication(id) {
+  const el = document.getElementById('linked-app-' + id);
+  if (!el) return;
+  try {
+    const r = await fetch('/jobs/' + id + '/application');
+    const data = await r.json();
+    if (data.found) {
+      el.innerHTML = `<a class="btn-sec" href="/tracker.html#${esc(data.id)}">🔗 View in Tracker (${esc(data.status)})</a>`;
+    }
+  } catch(e) { /* best-effort -- leave the placeholder empty on failure */ }
+}
+
+function jobDetailHTML(job) {
+  const ms = job.matchScore;
+  let scoreHTML = '';
+  if (ms) {
+    scoreHTML = `
+      <div class="score-grid">
+        <div class="score-box"><div class="num">${ms.overall}</div><div class="lbl">Overall</div></div>
+        <div class="score-box"><div class="num">${ms.required_skills_score}</div><div class="lbl">Required Skills</div></div>
+        <div class="score-box"><div class="num">${ms.preferred_skills_score}</div><div class="lbl">Preferred Skills</div></div>
+        <div class="score-box"><div class="num">${ms.experience_match}</div><div class="lbl">Experience</div></div>
+        <div class="score-box"><div class="num">${ms.industry_match}</div><div class="lbl">Industry</div></div>
+      </div>
+      <div class="explanation"><strong>${esc(ms.recommendation).toUpperCase()}</strong> — ${esc(ms.explanation)}
+        ${ms.work_authorization_compatible === false ? '<br><span style="color:var(--danger);">⚠ Possible work authorization mismatch — verify manually.</span>' : ''}
+      </div>
+    `;
+  } else {
+    scoreHTML = `<div class="empty-note" style="padding:0.75rem 0;">Not scored yet. Score it against your Profile before deciding whether to tailor a resume.</div>`;
+  }
+
+  return `
+    <div class="jd-text">${esc(job.description)}</div>
+    ${scoreHTML}
+    <div class="job-actions">
+      <button class="btn-sec" id="score-btn-${job.id}" onclick="scoreJob('${job.id}')">${ms ? 'Re-score' : 'Score against Profile'}</button>
+      <select class="status-select" onchange="updateStatus('${job.id}', this.value)">
+        ${STATUSES.map(s => `<option value="${s}" ${s === job.status ? 'selected' : ''}>${s}</option>`).join('')}
+      </select>
+      <button class="btn-sec" onclick="startTailoring('${job.id}')">Start Tailoring →</button>
+      ${job.url ? `<a class="btn-sec" href="${esc(safeHref(job.url))}" target="_blank" rel="noopener">Open posting ↗</a>` : ''}
+      <button class="btn-danger" onclick="deleteJob('${job.id}')">Delete</button>
+      <span id="linked-app-${job.id}"></span>
+    </div>
+  `;
+}
+
+async function addJob() {
+  const statusEl = document.getElementById('add-job-status');
+  const payload = {
+    company: document.getElementById('new-company').value.trim(),
+    title: document.getElementById('new-title').value.trim(),
+    description: document.getElementById('new-description').value.trim(),
+    url: document.getElementById('new-url').value.trim(),
+    source: document.getElementById('new-source').value.trim(),
+    location: document.getElementById('new-location').value.trim(),
+    workMode: document.getElementById('new-workMode').value.trim()
+  };
+  if (!payload.company || !payload.title || !payload.description) {
+    statusEl.style.color = 'var(--danger)';
+    statusEl.textContent = 'Company, title, and description are required.';
+    return;
+  }
+  try {
+    const r = await fetch('/jobs', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Save failed');
+    ['new-company','new-title','new-url','new-source','new-location','new-workMode','new-description'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    statusEl.style.color = 'var(--accent-mid)';
+    statusEl.textContent = '✓ Saved';
+    setTimeout(() => { statusEl.textContent = ''; }, 1800);
+    loadJobs();
+  } catch(e) {
+    statusEl.style.color = 'var(--danger)';
+    statusEl.textContent = 'Error: ' + e.message;
+  }
+}
+
+async function scoreJob(id) {
+  const btn = document.getElementById('score-btn-' + id);
+  btn.disabled = true;
+  btn.textContent = 'Scoring...';
+  try {
+    const r = await fetch('/jobs/' + id + '/score', { method: 'POST' });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Scoring failed');
+    await loadJobs();
+    document.getElementById('body-' + id).classList.add('open');
+    const job = await (await fetch('/jobs/' + id)).json();
+    document.getElementById('body-' + id).innerHTML = jobDetailHTML(job);
+  } catch(e) {
+    alert('Failed to score job: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Score against Profile';
+  }
+}
+
+async function updateStatus(id, status) {
+  try {
+    const r = await fetch('/jobs/' + id + '/status', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status })
+    });
+    if (!r.ok) throw new Error((await r.json()).error || 'Update failed');
+    await loadJobs();
+  } catch(e) {
+    alert('Failed to update status: ' + e.message);
+  }
+}
+
+async function deleteJob(id) {
+  if (!confirm('Delete this job?')) return;
+  try {
+    await fetch('/jobs/' + id, { method: 'DELETE' });
+    loadJobs();
+  } catch(e) {
+    alert('Failed to delete: ' + e.message);
+  }
+}
+
+function startTailoring(id) {
+  fetch('/jobs/' + id).then(r => r.json()).then(full => {
+    localStorage.setItem('handoffJob', JSON.stringify({
+      company: full.company, jobTitle: full.title, jobDescription: full.description,
+      // Carried through so the Tracker entry this becomes can link back to
+      // its originating Job Inbox record and show the same fit score,
+      // instead of the two living as disconnected records.
+      jobId: full.id, sourceMatchScore: full.matchScore || null
+    }));
+    updateStatus(id, 'Sent to Optimizer').finally(() => { window.location.href = '/'; });
+  });
+}
+
+// Deep-link support: /jobs.html#<id> auto-expands and scrolls to that card,
+// so a "View original job" link from the Tracker lands on the right one.
+function openFromHash() {
+  const id = (location.hash || '').replace(/^#/, '');
+  if (!id) return;
+  const card = document.getElementById('card-' + id);
+  if (!card) return;
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const body = document.getElementById('body-' + id);
+  if (body && !body.classList.contains('open')) toggleCard(id);
+}
+
+loadJobs().then(openFromHash);
+</script>
+</body>
+</html>

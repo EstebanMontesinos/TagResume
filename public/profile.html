@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Candidate Profile</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --accent:#1D9E75; --accent-light:#E1F5EE; --accent-mid:#0F6E56;
+      --danger:#A32D2D; --danger-light:#FCEBEB;
+      --info:#185FA5; --info-light:#E6F1FB;
+      --bg:#f9f9f8; --surface:#fff;
+      --border:rgba(0,0,0,0.1); --border-strong:rgba(0,0,0,0.2);
+      --text:#1a1a1a; --muted:#6b6b6b;
+      --radius:10px; --sans:'DM Sans',sans-serif; --mono:'DM Mono',monospace; --serif:'Instrument Serif',serif;
+    }
+    body { font-family:var(--sans); background:var(--bg); color:var(--text); min-height:100vh; }
+    .shell { max-width:820px; margin:0 auto; padding:2.5rem 1.5rem 4rem; }
+
+    .header { display:flex; align-items:center; justify-content:space-between; margin-bottom:2rem; padding-bottom:1.5rem; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:12px; }
+    .header h1 { font-family:var(--serif); font-size:26px; font-weight:400; }
+    .header h1 em { color:var(--accent); font-style:italic; }
+    .back-btn { padding:8px 16px; background:var(--surface); border:1px solid var(--border-strong); border-radius:var(--radius); font-size:13px; font-family:var(--sans); cursor:pointer; color:var(--text); text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+    .back-btn:hover { background:#f0f0ef; }
+
+    .section { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem; margin-bottom:1.25rem; }
+    .section-title { font-size:15px; font-weight:500; margin-bottom:4px; }
+    .section-sub { font-size:12px; color:var(--muted); margin-bottom:1rem; line-height:1.6; }
+
+    .field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+    @media(max-width:600px){ .field-row{ grid-template-columns:1fr; } }
+    .mini-lbl { font-size:10px; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:5px; display:block; }
+    input[type=text], input[type=email], textarea {
+      width:100%; padding:9px 11px; border:1px solid var(--border-strong); border-radius:var(--radius);
+      font-family:var(--sans); font-size:13px; background:var(--surface); color:var(--text);
+    }
+    textarea { font-family:var(--mono); font-size:12px; line-height:1.6; resize:vertical; min-height:90px; }
+
+    .btn-primary { padding:10px 18px; background:var(--accent); color:white; border:none; border-radius:var(--radius); font-size:13px; font-family:var(--sans); cursor:pointer; }
+    .btn-primary:hover { background:var(--accent-mid); }
+    .btn-sec { padding:9px 16px; background:var(--surface); color:var(--text); border:1px solid var(--border-strong); border-radius:var(--radius); font-size:13px; font-family:var(--sans); cursor:pointer; }
+    .btn-sec:hover { background:#f0f0ef; }
+    .btn-danger { padding:7px 12px; background:var(--surface); color:var(--danger); border:1px solid #F09595; border-radius:var(--radius); font-size:12px; font-family:var(--sans); cursor:pointer; }
+    .btn-danger:hover { background:var(--danger-light); }
+
+    .resume-card { border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-bottom:10px; }
+    .resume-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; gap:8px; }
+    .resume-card-name { font-size:14px; font-weight:500; }
+    .resume-card-meta { font-size:11px; font-family:var(--mono); color:var(--muted); }
+
+    .add-resume-box { border:1.5px dashed var(--border-strong); border-radius:var(--radius); padding:14px; }
+
+    .save-status { font-size:11px; font-family:var(--mono); color:var(--accent-mid); margin-top:8px; height:14px; }
+    .empty-note { font-size:12.5px; color:var(--muted); text-align:center; padding:1.5rem; }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <div class="header">
+    <h1>Candidate <em>Profile</em></h1>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <a href="/analytics.html" class="back-btn">📊 Analytics</a>
+      <a href="/jobs.html" class="back-btn">📥 Jobs</a>
+      <a href="/tracker.html" class="back-btn">📋 Tracker</a>
+      <a href="/vault.html" class="back-btn">🗄️ Vault</a>
+      <a href="/" class="back-btn">← Back to Optimizer</a>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Contact Info</div>
+    <div class="section-sub">Used as a reference — not yet auto-inserted into tailored resumes.</div>
+    <div class="field-row">
+      <div><label class="mini-lbl">Full name</label><input type="text" id="p-fullName"></div>
+      <div><label class="mini-lbl">Email</label><input type="email" id="p-email"></div>
+    </div>
+    <div class="field-row">
+      <div><label class="mini-lbl">Phone</label><input type="text" id="p-phone"></div>
+      <div><label class="mini-lbl">Work authorization</label><input type="text" id="p-workAuthorization" placeholder="e.g. US Citizen, H1B..."></div>
+    </div>
+    <div class="field-row">
+      <div><label class="mini-lbl">LinkedIn URL</label><input type="text" id="p-linkedinUrl"></div>
+      <div><label class="mini-lbl">Portfolio URL</label><input type="text" id="p-portfolioUrl"></div>
+    </div>
+    <button class="btn-primary" onclick="saveProfile()">Save Contact Info</button>
+    <div class="save-status" id="contact-save-status"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Background Summary</div>
+    <div class="section-sub">Freeform for now — a place to keep the full picture (all roles, skills, certs, education) even when a given tailored resume only shows a subset. Future features (gap analysis, interview prep) can draw on this.</div>
+
+    <label class="mini-lbl">Employment history</label>
+    <textarea id="p-employmentHistorySummary" placeholder="Company | Title | Dates — key responsibilities and accomplishments, one block per role..." style="margin-bottom:12px;"></textarea>
+
+    <label class="mini-lbl">Skills</label>
+    <textarea id="p-skillsSummary" placeholder="Full list of skills/tools/platforms you can speak to, even ones not on your current resume..." style="margin-bottom:12px;"></textarea>
+
+    <label class="mini-lbl">Certifications</label>
+    <textarea id="p-certificationsSummary" placeholder="All certifications, with issuer/date if relevant..." style="margin-bottom:12px;"></textarea>
+
+    <label class="mini-lbl">Education</label>
+    <textarea id="p-educationSummary" placeholder="Institution, degree, field, graduation date, GPA if relevant..."></textarea>
+
+    <div style="margin-top:12px;">
+      <button class="btn-primary" onclick="saveProfile()">Save Background Summary</button>
+      <div class="save-status" id="summary-save-status"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Base Resumes</div>
+    <div class="section-sub">Save your resume variants here once (e.g. "Consultant", "PM", "Software Engineer") — then load any of them straight into the Optimizer instead of re-pasting text every session.</div>
+    <div id="resume-list"></div>
+
+    <div class="add-resume-box">
+      <label class="mini-lbl">Upload a resume file (optional)</label>
+      <input type="file" id="resume-upload-input" accept=".txt,.docx,.pdf" onchange="handleProfileResumeUpload(this)" style="margin-bottom:4px;font-size:12.5px;">
+      <div id="resume-upload-status" style="font-size:11px;font-family:var(--mono);margin-bottom:10px;height:14px;"></div>
+
+      <label class="mini-lbl">Variant name</label>
+      <input type="text" id="new-resume-name" placeholder="e.g. Consultant, PM, Software Engineer..." style="margin-bottom:8px;">
+      <label class="mini-lbl">Resume text</label>
+      <textarea id="new-resume-text" placeholder="Paste the full resume text for this variant, or upload a file above..." style="min-height:140px;margin-bottom:10px;"></textarea>
+      <button class="btn-primary" onclick="addBaseResume()">Save This Variant</button>
+      <div class="save-status" id="add-resume-status"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Fill-Assist Bookmarklet</div>
+    <div class="section-sub">
+      Drag the button below to your bookmarks bar. On any job application page, click it to
+      auto-fill your name, email, phone, LinkedIn, and portfolio URL into matching fields --
+      highlighted in green so you can see exactly what changed. Fields for salary, work
+      authorization, or sponsorship are never guessed -- they're highlighted in amber for you to
+      answer yourself, since a wrong answer there is the single most damaging mistake an
+      auto-apply tool can make. Nothing is ever submitted automatically, and your resume file
+      still has to be attached by you (browsers block scripts from filling file inputs, by
+      design). Re-drag this link whenever you update your contact info above, since the data is
+      baked into the link itself -- nothing is fetched from this app while you're on another site.
+    </div>
+    <div style="text-align:center;padding:1.25rem;border:1.5px dashed var(--border-strong);border-radius:var(--radius);">
+      <a id="fill-assist-link" href="javascript:void(0)" style="display:inline-block;padding:12px 22px;background:var(--text);color:white;border-radius:var(--radius);font-size:14px;font-family:var(--sans);text-decoration:none;cursor:grab;">✋ Fill My Application</a>
+      <div style="font-size:11px;color:var(--muted);margin-top:10px;">Drag this to your bookmarks bar -- don't click it here.</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:10px;">Dragging not working? <span style="cursor:pointer;text-decoration:underline;color:var(--accent-mid);" onclick="copyBookmarkletCode()">Copy the code</span> and add it as a bookmark manually instead (steps below).</div>
+      <div id="bookmarklet-copy-status" class="save-status" style="margin-top:2px;"></div>
+    </div>
+    <div style="margin-top:14px;padding:12px 14px;background:var(--bg);border-radius:var(--radius);font-size:12px;color:var(--muted);line-height:1.7;">
+      <strong style="color:var(--text);">If drag-and-drop won't work in your browser:</strong><br>
+      1. Make sure the bookmarks bar is visible first (Chrome/Edge: <code>Ctrl+Shift+B</code>, Mac: <code>Cmd+Shift+B</code>).<br>
+      2. Click "Copy the code" above.<br>
+      3. Right-click your bookmarks bar &rarr; <em>Add page...</em> (or press <code>Ctrl+D</code> / <code>Cmd+D</code> on any tab to create a bookmark, then edit it).<br>
+      4. Name it "Fill My Application", then paste the copied code into the URL/Location field (replacing whatever's there) and save.<br>
+      5. Click that bookmark whenever you're on a job application page.
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+let profile = null;
+
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+// Escapes a value for safe use as the single-quoted string argument inside an
+// onclick="fn('...')" attribute -- escapes JS string-breakout chars first
+// (backslash, single quote), then HTML-attribute chars (&, <, >, ") so a
+// resume-variant name containing a quote can't break out of either layer.
+function escJsAttr(s) {
+  return String(s || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── Fill-Assist Bookmarklet ───────────────────────────────────────────────────
+// This entire function is stringified via .toString() and injected into
+// whatever page the bookmarklet is clicked on -- it must be fully
+// self-contained (no closures over this page's variables) since it runs in
+// a totally different page's JS context.
+//
+// Deliberately conservative: only fills fields it can match with high
+// confidence (name/email/phone/linkedin/portfolio via label text), and
+// explicitly REFUSES to guess on salary/work-authorization/sponsorship --
+// the exact fields where a wrong auto-filled answer does real professional
+// damage (see docs/semi-automated-submission-options.md). Never touches a
+// submit button and never touches file inputs (resume upload), since
+// browsers block scripts from setting file input values anyway.
+function fillAssistPayload(p) {
+  var fullName = (p.fullName || '').trim();
+  var parts = fullName.split(/\s+/).filter(Boolean);
+  var firstName = parts[0] || '';
+  var lastName = parts.length > 1 ? parts[parts.length - 1] : '';
+
+  var rules = [
+    { test: /first\s*name/i, value: firstName },
+    { test: /last\s*name|surname/i, value: lastName },
+    { test: /full\s*name|your\s*name|applicant\s*name|^name$/i, value: fullName },
+    { test: /e-?\s*mail/i, value: p.email || '' },
+    { test: /phone|mobile|contact\s*number/i, value: p.phone || '' },
+    { test: /linked\s*in/i, value: p.linkedinUrl || '' },
+    { test: /portfolio|personal\s*site|personal\s*website/i, value: p.portfolioUrl || '' }
+  ];
+
+  // Never auto-answer these -- always flag for manual entry instead.
+  var RISKY = /work\s*authoriz|sponsor|visa|legally\s*(authorized|eligible)|require.*sponsorship|salary|compensation|expected\s*pay|desired\s*pay|desired\s*salary|current\s*salary/i;
+
+  function labelTextFor(field) {
+    var text = '';
+    if (field.id && window.CSS && CSS.escape) {
+      var lbl = document.querySelector('label[for="' + CSS.escape(field.id) + '"]');
+      if (lbl) text += ' ' + lbl.textContent;
+    }
+    var wrapping = field.closest ? field.closest('label') : null;
+    if (wrapping) text += ' ' + wrapping.textContent;
+    text += ' ' + (field.getAttribute('aria-label') || '');
+    text += ' ' + (field.getAttribute('placeholder') || '');
+    text += ' ' + (field.name || '');
+    return text;
+  }
+
+  function setFieldValue(field, value) {
+    var proto = field.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+    var desc = Object.getOwnPropertyDescriptor(proto, 'value');
+    if (desc && desc.set) { desc.set.call(field, value); } else { field.value = value; }
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function flagField(field, kind) {
+    field.style.outline = kind === 'ok' ? '2px solid #1D9E75' : '2px solid #BA7517';
+    field.style.outlineOffset = '2px';
+  }
+
+  var filled = 0, flagged = 0;
+  var fields = document.querySelectorAll('input, textarea, select');
+  fields.forEach(function(field) {
+    var t = field.type;
+    if (t === 'file' || t === 'hidden' || t === 'submit' || t === 'button' || t === 'checkbox' || t === 'radio') return;
+    var label = labelTextFor(field);
+    if (RISKY.test(label)) { flagField(field, 'warn'); flagged++; return; }
+    for (var i = 0; i < rules.length; i++) {
+      if (rules[i].test.test(label) && rules[i].value) {
+        setFieldValue(field, rules[i].value);
+        flagField(field, 'ok');
+        filled++;
+        return;
+      }
+    }
+  });
+
+  var old = document.getElementById('__fillAssistBox');
+  if (old) old.remove();
+  var box = document.createElement('div');
+  box.id = '__fillAssistBox';
+  box.style.cssText = 'position:fixed;bottom:16px;right:16px;background:#1a1a1a;color:#fff;padding:14px 16px;border-radius:10px;font:13px/1.5 -apple-system,sans-serif;z-index:2147483647;max-width:280px;box-shadow:0 4px 20px rgba(0,0,0,0.35);';
+  box.innerHTML = '<strong>Fill-Assist</strong><br>Filled ' + filled + ' field(s) \u2014 green outline.<br>' + flagged + ' field(s) need your own answer (salary / work authorization / sponsorship) \u2014 amber outline.<br><br>Nothing was submitted, and your resume was not attached. Review every field, attach your resume, then click Submit yourself.<br><br><span style="cursor:pointer;text-decoration:underline;" onclick="this.parentElement.remove()">Dismiss</span>';
+  document.body.appendChild(box);
+}
+
+function buildBookmarklet() {
+  if (!profile) return;
+  var payload = {
+    fullName: profile.fullName || '',
+    email: profile.email || '',
+    phone: profile.phone || '',
+    linkedinUrl: profile.linkedinUrl || '',
+    portfolioUrl: profile.portfolioUrl || ''
+  };
+  var src = '(' + fillAssistPayload.toString() + ')(' + JSON.stringify(payload) + ');';
+  var link = document.getElementById('fill-assist-link');
+  if (link) link.href = 'javascript:' + src;
+}
+
+function copyBookmarkletCode() {
+  const link = document.getElementById('fill-assist-link');
+  const statusEl = document.getElementById('bookmarklet-copy-status');
+  if (!link || !link.href || link.href.indexOf('javascript:') !== 0) {
+    statusEl.style.color = 'var(--danger)';
+    statusEl.textContent = 'Save your contact info above first, then try again.';
+    return;
+  }
+  navigator.clipboard.writeText(link.href).then(() => {
+    statusEl.style.color = 'var(--accent-mid)';
+    statusEl.textContent = '\u2713 Copied \u2014 paste it as the URL when adding the bookmark manually.';
+    setTimeout(() => { statusEl.textContent = ''; }, 4000);
+  }).catch(() => {
+    statusEl.style.color = 'var(--danger)';
+    statusEl.textContent = 'Could not copy automatically \u2014 select the link above, right-click, and Copy Link instead.';
+  });
+}
+
+// Reuses the same extraction approach as the Optimizer's file upload
+// (mammoth for .docx, pdf.js for .pdf, plain text otherwise) so uploading a
+// resume here works the same way it does there. Deliberately only prefills
+// the Add-Base-Resume form -- it does NOT touch the freeform background
+// summary fields above, and does NOT save anything by itself. You still
+// review the extracted text and click "Save This Variant" yourself, same
+// as pasting text in manually -- extraction quality varies by file
+// formatting, so nothing gets written to your Profile unreviewed.
+async function handleProfileResumeUpload(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('resume-upload-status');
+  const fileType = file.name.split('.').pop().toLowerCase();
+  statusEl.style.color = 'var(--warn, #BA7517)';
+  statusEl.textContent = '⏳ Reading ' + file.name + '...';
+
+  try {
+    let txt = '';
+    if (fileType === 'txt') {
+      txt = await file.text();
+    } else if (fileType === 'docx') {
+      const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+      txt = result.value;
+    } else if (fileType === 'pdf') {
+      const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        txt += content.items.map(x => x.str).join(' ') + '\n';
+      }
+    } else {
+      txt = await file.text();
+    }
+
+    document.getElementById('new-resume-text').value = txt.trim();
+    const nameEl = document.getElementById('new-resume-name');
+    if (!nameEl.value.trim()) {
+      // Suggest a variant name from the filename (strip extension, tidy separators) -- editable, not final.
+      const suggested = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+      if (suggested) nameEl.value = suggested;
+    }
+    statusEl.style.color = 'var(--accent-mid)';
+    statusEl.textContent = '✓ Extracted ' + file.name + ' -- review the text below, then save.';
+  } catch(e) {
+    statusEl.style.color = 'var(--danger)';
+    statusEl.textContent = 'Could not read file: ' + e.message;
+  }
+}
+
+async function loadProfile() {
+  try {
+    const r = await fetch('/profile');
+    profile = await r.json();
+    document.getElementById('p-fullName').value = profile.fullName || '';
+    document.getElementById('p-email').value = profile.email || '';
+    document.getElementById('p-phone').value = profile.phone || '';
+    document.getElementById('p-workAuthorization').value = profile.workAuthorization || '';
+    document.getElementById('p-linkedinUrl').value = profile.linkedinUrl || '';
+    document.getElementById('p-portfolioUrl').value = profile.portfolioUrl || '';
+    document.getElementById('p-employmentHistorySummary').value = profile.employmentHistorySummary || '';
+    document.getElementById('p-skillsSummary').value = profile.skillsSummary || '';
+    document.getElementById('p-certificationsSummary').value = profile.certificationsSummary || '';
+    document.getElementById('p-educationSummary').value = profile.educationSummary || '';
+    renderResumeList();
+    buildBookmarklet();
+  } catch(e) {
+    document.querySelector('.shell').insertAdjacentHTML('afterbegin',
+      `<div style="color:var(--danger);font-size:13px;font-family:var(--mono);margin-bottom:1rem;">Could not load profile: ${e.message}</div>`);
+  }
+}
+
+async function saveProfile() {
+  const payload = {
+    fullName: document.getElementById('p-fullName').value,
+    email: document.getElementById('p-email').value,
+    phone: document.getElementById('p-phone').value,
+    workAuthorization: document.getElementById('p-workAuthorization').value,
+    linkedinUrl: document.getElementById('p-linkedinUrl').value,
+    portfolioUrl: document.getElementById('p-portfolioUrl').value,
+    employmentHistorySummary: document.getElementById('p-employmentHistorySummary').value,
+    skillsSummary: document.getElementById('p-skillsSummary').value,
+    certificationsSummary: document.getElementById('p-certificationsSummary').value,
+    educationSummary: document.getElementById('p-educationSummary').value
+  };
+  try {
+    const r = await fetch('/profile', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    if (!r.ok) throw new Error((await r.json()).error || 'Save failed');
+    profile = await r.json();
+    buildBookmarklet();
+    ['contact-save-status','summary-save-status'].forEach(id => {
+      const el = document.getElementById(id);
+      el.textContent = '✓ Saved';
+      setTimeout(() => { el.textContent = ''; }, 1800);
+    });
+  } catch(e) {
+    alert('Failed to save profile: ' + e.message);
+  }
+}
+
+function renderResumeList() {
+  const list = (profile.baseResumes || []);
+  const el = document.getElementById('resume-list');
+  if (!list.length) {
+    el.innerHTML = `<div class="empty-note">No base resumes saved yet — add your first variant below.</div>`;
+    return;
+  }
+  el.innerHTML = list.map(r => `
+    <div class="resume-card">
+      <div class="resume-card-header">
+        <div>
+          <div class="resume-card-name">${esc(r.name)}</div>
+          <div class="resume-card-meta">${r.text.length.toLocaleString()} characters</div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn-sec" onclick="copyResumeText('${escJsAttr(r.name)}')">Copy text</button>
+          <button class="btn-danger" onclick="deleteBaseResume('${escJsAttr(r.name)}')">Delete</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function copyResumeText(name) {
+  const r = (profile.baseResumes || []).find(x => x.name === name);
+  if (!r) return;
+  navigator.clipboard.writeText(r.text).then(() => alert('Copied "' + name + '" to clipboard — paste it into the Optimizer.'));
+}
+
+async function addBaseResume() {
+  const name = document.getElementById('new-resume-name').value.trim();
+  const text = document.getElementById('new-resume-text').value.trim();
+  const statusEl = document.getElementById('add-resume-status');
+  if (!name || !text) { statusEl.style.color = 'var(--danger)'; statusEl.textContent = 'Name and resume text are both required.'; return; }
+
+  try {
+    const r = await fetch('/profile/base-resumes', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, text })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Save failed');
+    profile.baseResumes = data.baseResumes;
+    renderResumeList();
+    document.getElementById('new-resume-name').value = '';
+    document.getElementById('new-resume-text').value = '';
+    statusEl.style.color = 'var(--accent-mid)';
+    statusEl.textContent = '✓ Saved "' + name + '"';
+    setTimeout(() => { statusEl.textContent = ''; }, 2000);
+  } catch(e) {
+    statusEl.style.color = 'var(--danger)';
+    statusEl.textContent = 'Error: ' + e.message;
+  }
+}
+
+async function deleteBaseResume(name) {
+  if (!confirm('Delete the "' + name + '" resume variant?')) return;
+  try {
+    const r = await fetch('/profile/base-resumes/' + encodeURIComponent(name), { method: 'DELETE' });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Delete failed');
+    profile.baseResumes = data.baseResumes;
+    renderResumeList();
+  } catch(e) {
+    alert('Failed to delete: ' + e.message);
+  }
+}
+
+loadProfile();
+</script>
+</body>
+</html>

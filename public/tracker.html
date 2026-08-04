@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Application Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --accent:#1D9E75; --accent-light:#E1F5EE; --accent-mid:#0F6E56;
+      --danger:#A32D2D; --danger-light:#FCEBEB;
+      --warn:#BA7517; --warn-light:#FAEEDA;
+      --info:#185FA5; --info-light:#E6F1FB;
+      --bg:#f9f9f8; --surface:#fff;
+      --border:rgba(0,0,0,0.1); --border-strong:rgba(0,0,0,0.2);
+      --text:#1a1a1a; --muted:#6b6b6b;
+      --radius:10px; --sans:'DM Sans',sans-serif; --mono:'DM Mono',monospace; --serif:'Instrument Serif',serif;
+    }
+    body { font-family:var(--sans); background:var(--bg); color:var(--text); min-height:100vh; }
+    .shell { max-width:1000px; margin:0 auto; padding:2.5rem 1.5rem 4rem; }
+
+    .header { display:flex; align-items:center; justify-content:space-between; margin-bottom:2rem; padding-bottom:1.5rem; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:12px; }
+    .header h1 { font-family:var(--serif); font-size:26px; font-weight:400; }
+    .header h1 em { color:var(--accent); font-style:italic; }
+    .back-btn { padding:8px 16px; background:var(--surface); border:1px solid var(--border-strong); border-radius:var(--radius); font-size:13px; font-family:var(--sans); cursor:pointer; color:var(--text); text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+    .back-btn:hover { background:#f0f0ef; }
+
+    .empty-state { text-align:center; padding:4rem 2rem; color:var(--muted); }
+    .empty-state .ei { font-size:48px; margin-bottom:1rem; }
+    .empty-state p { font-size:14px; line-height:1.7; }
+
+    .filter-row { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:1.5rem; }
+    .filter-chip { padding:5px 12px; border-radius:20px; font-size:12px; font-family:var(--mono); border:1px solid var(--border-strong); background:var(--surface); cursor:pointer; color:var(--text); }
+    .filter-chip.active { background:var(--text); color:white; border-color:var(--text); }
+
+    .status-group { margin-bottom:1.75rem; }
+    .status-group-title { font-size:13px; font-weight:500; font-family:var(--mono); text-transform:uppercase; letter-spacing:0.04em; color:var(--muted); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+    .status-count { background:var(--border); border-radius:20px; padding:1px 8px; font-size:11px; }
+
+    .app-grid { display:flex; flex-direction:column; gap:10px; }
+    .app-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; transition:box-shadow 0.15s; }
+    .app-card:hover { box-shadow:0 2px 12px rgba(0,0,0,0.08); }
+    .card-header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; cursor:pointer; gap:12px; }
+    .card-meta { flex:1; min-width:0; }
+    .card-company { font-size:15px; font-weight:500; color:var(--text); margin-bottom:3px; }
+    .card-title { font-size:12px; color:var(--muted); font-family:var(--mono); }
+    .card-date { font-size:11px; font-family:var(--mono); color:var(--muted); white-space:nowrap; }
+    .card-scores { display:flex; gap:8px; flex-shrink:0; }
+    .score-chip { font-size:11px; font-family:var(--mono); padding:2px 8px; border-radius:20px; white-space:nowrap; }
+    .sc-green { background:var(--accent-light); color:var(--accent-mid); }
+    .sc-amber { background:var(--warn-light); color:var(--warn); }
+    .sc-red { background:var(--danger-light); color:var(--danger); }
+    .followup-chip { background:var(--info-light); color:var(--info); font-size:11px; font-family:var(--mono); padding:2px 8px; border-radius:20px; white-space:nowrap; }
+    .card-chevron { font-size:12px; color:var(--muted); transition:transform 0.2s; flex-shrink:0; }
+    .card-chevron.open { transform:rotate(180deg); }
+
+    .card-body { display:none; border-top:1px solid var(--border); padding:16px; }
+    .card-body.open { display:block; }
+
+    .mini-lbl { font-size:10px; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; display:block; }
+    .field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+    @media(max-width:600px){ .field-row{ grid-template-columns:1fr; } }
+    .resume-pre { font-family:var(--mono); font-size:11.5px; line-height:1.8; white-space:pre-wrap; color:var(--text); background:#fafaf9; border:1px solid var(--border); border-radius:var(--radius); padding:1rem 1.25rem; max-height:340px; overflow-y:auto; margin-bottom:12px; }
+
+    select, input[type=text], input[type=date], textarea {
+      width:100%; padding:8px 10px; border:1px solid var(--border-strong); border-radius:var(--radius);
+      font-family:var(--sans); font-size:13px; background:var(--surface); color:var(--text);
+    }
+    textarea { font-family:var(--mono); font-size:12px; resize:vertical; min-height:60px; }
+
+    .btn-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
+    .btn-primary { padding:8px 14px; background:var(--accent); color:white; border:none; border-radius:var(--radius); font-size:13px; font-family:var(--sans); cursor:pointer; }
+    .btn-primary:hover { background:var(--accent-mid); }
+    .btn-danger { padding:8px 14px; background:var(--surface); color:var(--danger); border:1px solid #F09595; border-radius:var(--radius); font-size:13px; font-family:var(--sans); cursor:pointer; }
+    .btn-danger:hover { background:var(--danger-light); }
+    .btn-sec { padding:8px 14px; background:var(--surface); color:var(--text); border:1px solid var(--border-strong); border-radius:var(--radius); font-size:13px; font-family:var(--sans); cursor:pointer; }
+    .btn-sec:hover { background:#f0f0ef; }
+
+    .history-list { font-size:11px; font-family:var(--mono); color:var(--muted); margin-top:4px; }
+    .history-item { padding:2px 0; }
+
+    .prep-section { margin-bottom:14px; }
+    .prep-badge { display:inline-block; font-size:10px; font-family:var(--mono); font-weight:500; padding:2px 8px; border-radius:20px; margin-bottom:8px; }
+    .badge-verified { background:var(--accent-light); color:var(--accent-mid); }
+    .badge-predicted { background:var(--warn-light); color:var(--warn); }
+    .prep-list { list-style:none; }
+    .prep-list li { font-size:12.5px; line-height:1.7; padding:6px 10px; background:#fafaf9; border:1px solid var(--border); border-radius:8px; margin-bottom:6px; }
+    .star-story { font-size:12.5px; line-height:1.7; padding:10px 12px; background:#fafaf9; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; }
+    .star-story .sq { font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:4px; }
+
+    .toast { position:fixed; bottom:24px; right:24px; background:#1a1a1a; color:white; padding:10px 18px; border-radius:var(--radius); font-size:13px; font-family:var(--mono); opacity:0; transition:opacity 0.2s; pointer-events:none; z-index:1000; }
+    .toast.show { opacity:1; }
+
+    .followup-banner { border-radius:var(--radius); padding:12px 14px; margin-bottom:1.25rem; }
+    .followup-banner-title { font-size:12px; font-weight:500; font-family:var(--mono); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; }
+    .followup-row { display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:8px; cursor:pointer; font-size:13px; }
+    .followup-row:hover { background:rgba(0,0,0,0.04); }
+    .followup-when { font-size:11px; font-family:var(--mono); padding:2px 8px; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+    .fw-overdue { background:var(--danger-light); color:var(--danger); }
+    .fw-today   { background:var(--warn-light); color:var(--warn); }
+    .fw-soon    { background:var(--info-light); color:var(--info); }
+    .followup-company { font-weight:500; }
+    .followup-title { color:var(--muted); font-size:12px; }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <div class="header">
+    <h1>Application <em>Tracker</em></h1>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <a href="/analytics.html" class="back-btn">📊 Analytics</a>
+      <a href="/jobs.html" class="back-btn">📥 Jobs</a>
+      <a href="/vault.html" class="back-btn">🗄️ Vault</a>
+      <a href="/profile.html" class="back-btn">👤 Profile</a>
+      <a href="/" class="back-btn">← Back to Optimizer</a>
+    </div>
+  </div>
+
+  <div id="followup-banner"></div>
+
+  <div id="filter-row" class="filter-row"></div>
+  <div id="tracker-content">
+    <div class="empty-state"><div class="ei">⏳</div><p>Loading your applications...</p></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const STATUSES = ['Saved', 'Applied', 'Recruiter Screen', 'Interview', 'Offer', 'Rejected', 'Withdrawn', 'Archived'];
+let currentFilter = 'All';
+let allApps = [];
+
+function scoreClass(n) { return n >= 75 ? 'sc-green' : n >= 50 ? 'sc-amber' : 'sc-red'; }
+
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function renderFilterRow() {
+  const counts = {};
+  allApps.forEach(a => { counts[a.status] = (counts[a.status]||0) + 1; });
+  const chips = ['All', ...STATUSES].map(s => {
+    const count = s === 'All' ? allApps.length : (counts[s] || 0);
+    return `<button class="filter-chip ${s===currentFilter?'active':''}" onclick="setFilter('${s}')">${s} ${count ? '('+count+')' : ''}</button>`;
+  }).join('');
+  document.getElementById('filter-row').innerHTML = chips;
+}
+
+function setFilter(status) {
+  currentFilter = status;
+  renderFilterRow();
+  renderTracker();
+}
+
+function emptyHTML() {
+  return `<div class="empty-state">
+    <div class="ei">📋</div>
+    <p>No applications tracked yet.<br>Tailor a resume in the Optimizer and click <strong>"Save to Tracker"</strong> to start tracking it here.</p>
+  </div>`;
+}
+
+async function loadTracker() {
+  try {
+    const r = await fetch('/applications/list');
+    allApps = await r.json();
+    renderFilterRow();
+    renderTracker();
+    renderFollowUpBanner();
+    openFromHash();
+  } catch(e) {
+    document.getElementById('tracker-content').innerHTML =
+      `<div style="color:var(--danger);font-size:13px;font-family:var(--mono);">Could not load applications: ${e.message}</div>`;
+  }
+}
+
+// Surfaces applications whose follow-up date is overdue, due today, or due
+// within the next 7 days. The data (followUpDate) has existed on every
+// application since the Tracker was built -- nothing displayed it anywhere
+// until now, so a date you set was easy to set and then never see again.
+function renderFollowUpBanner() {
+  const el = document.getElementById('followup-banner');
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const horizon = new Date();
+  horizon.setDate(horizon.getDate() + 7);
+  const horizonStr = horizon.toISOString().slice(0, 10);
+
+  const due = allApps
+    .filter(a => a.followUpDate && a.followUpDate.slice(0, 10) <= horizonStr)
+    .sort((a, b) => a.followUpDate.localeCompare(b.followUpDate));
+
+  if (!due.length) { el.innerHTML = ''; el.className = ''; return; }
+
+  el.className = 'followup-banner';
+  el.style.background = 'var(--bg)';
+  el.style.border = '1px solid var(--border)';
+  el.innerHTML = `
+    <div class="followup-banner-title">📅 Follow-ups (${due.length})</div>
+    ${due.map(a => {
+      const dateStr = a.followUpDate.slice(0, 10);
+      let cls = 'fw-soon', label = formatDate(a.followUpDate);
+      if (dateStr < todayStr) { cls = 'fw-overdue'; label = 'Overdue — ' + label; }
+      else if (dateStr === todayStr) { cls = 'fw-today'; label = 'Today'; }
+      return `
+        <div class="followup-row" onclick="location.hash='${esc(a.id)}'; openFromHash();">
+          <span class="followup-when ${cls}">${label}</span>
+          <span class="followup-company">${esc(a.company)}</span>
+          <span class="followup-title">${esc(a.jobTitle) || ''}</span>
+        </div>`;
+    }).join('')}
+  `;
+}
+
+// Deep-link support: /tracker.html#<id> auto-expands and scrolls to that
+// card -- lets the Job Inbox's "View in Tracker" link land on the right one.
+// If the app's status group isn't visible under the current filter, switch
+// to "All" first so the card actually exists in the DOM to scroll to.
+function openFromHash() {
+  const id = (location.hash || '').replace(/^#/, '');
+  if (!id) return;
+  const app = allApps.find(a => a.id === id);
+  if (!app) return;
+  if (currentFilter !== 'All' && currentFilter !== app.status) {
+    currentFilter = 'All';
+    renderFilterRow();
+    renderTracker();
+  }
+  const card = document.getElementById('card-' + id);
+  if (!card) return;
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const body = document.getElementById('body-' + id);
+  if (body && !body.classList.contains('open')) toggleCard(id);
+}
+
+function renderTracker() {
+  const el = document.getElementById('tracker-content');
+  if (!allApps.length) { el.innerHTML = emptyHTML(); return; }
+
+  const visible = currentFilter === 'All' ? allApps : allApps.filter(a => a.status === currentFilter);
+  if (!visible.length) {
+    el.innerHTML = `<div class="empty-state"><div class="ei">🔍</div><p>No applications with status "${currentFilter}".</p></div>`;
+    return;
+  }
+
+  // Group by status, in canonical STATUSES order, when showing "All"
+  const groups = currentFilter === 'All'
+    ? STATUSES.map(s => ({ status: s, items: visible.filter(a => a.status === s) })).filter(g => g.items.length)
+    : [{ status: currentFilter, items: visible }];
+
+  el.innerHTML = groups.map(g => `
+    <div class="status-group">
+      <div class="status-group-title">${g.status} <span class="status-count">${g.items.length}</span></div>
+      <div class="app-grid">
+        ${g.items.map(cardHTML).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function cardHTML(entry) {
+  const followup = entry.followUpDate ? `<span class="followup-chip">follow up ${formatDate(entry.followUpDate)}</span>` : '';
+  const scores = (entry.matchScore != null || entry.atsScore != null) ? `
+    <div class="card-scores">
+      ${entry.matchScore != null ? `<span class="score-chip ${scoreClass(entry.matchScore)}">${entry.matchScore} match</span>` : ''}
+      ${entry.atsScore != null ? `<span class="score-chip ${scoreClass(entry.atsScore)}">${entry.atsScore} ATS</span>` : ''}
+    </div>` : '';
+  return `
+    <div class="app-card" id="card-${entry.id}">
+      <div class="card-header" onclick="toggleCard('${entry.id}')">
+        <div class="card-meta">
+          <div class="card-company">${esc(entry.company)}</div>
+          <div class="card-title">${esc(entry.jobTitle) || 'No title saved'}</div>
+        </div>
+        ${scores}
+        ${followup}
+        <div class="card-date">${formatDate(entry.updatedAt)}</div>
+        <div class="card-chevron" id="chev-${entry.id}">▼</div>
+      </div>
+      <div class="card-body" id="body-${entry.id}">
+        <div id="detail-${entry.id}"></div>
+      </div>
+    </div>`;
+}
+
+function toggleCard(id) {
+  const body = document.getElementById('body-' + id);
+  const chev = document.getElementById('chev-' + id);
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chev.classList.toggle('open', !isOpen);
+  if (!isOpen) loadDetail(id);
+}
+
+async function loadDetail(id) {
+  const container = document.getElementById('detail-' + id);
+  if (container.dataset.loaded) return;
+  container.dataset.loaded = '1';
+  container.innerHTML = '<div style="font-size:12px;color:var(--muted);font-family:var(--mono);">Loading...</div>';
+  try {
+    const r = await fetch('/applications/' + id);
+    const entry = await r.json();
+    container.innerHTML = detailHTML(entry);
+  } catch(e) {
+    container.innerHTML = '<div style="color:var(--danger);font-size:12px;">Failed to load: ' + e.message + '</div>';
+  }
+}
+
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+// Only allow http(s) links to render as a real href -- rejects javascript:/data:/etc.
+// URIs so a pasted job URL can never execute script when "Open posting" is clicked.
+function safeHref(u) {
+  const s = (u || '').trim();
+  if (/^https?:\/\//i.test(s)) return s;
+  return '#';
+}
+
+function listSection(title, items, badgeClass, badgeLabel) {
+  if (!items || !items.length) return '';
+  return `
+    <div class="prep-section">
+      <span class="prep-badge ${badgeClass}">${badgeLabel}</span>
+      <div class="mini-lbl" style="margin-top:2px;">${title}</div>
+      <ul class="prep-list">${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>
+    </div>`;
+}
+
+function interviewPrepHTML(entry) {
+  const p = entry.interviewPrep;
+  if (!p) {
+    return `<p style="font-size:12.5px;color:var(--muted);">No interview prep generated yet for this application.</p>`;
+  }
+
+  const starHTML = (p.star_stories && p.star_stories.length) ? `
+    <div class="prep-section">
+      <span class="prep-badge badge-verified">From your resume</span>
+      <div class="mini-lbl" style="margin-top:2px;">Recommended STAR stories</div>
+      ${p.star_stories.map(s => `
+        <div class="star-story">
+          <div class="sq">Q: ${esc(s.likely_question||'')}</div>
+          <div>${esc(s.story||'')}</div>
+        </div>`).join('')}
+    </div>` : '';
+
+  return `
+    <div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:10px;">Generated ${formatDate(p.generatedAt)}</div>
+
+    ${p.role_summary ? `
+    <div class="prep-section">
+      <div class="mini-lbl">Role summary</div>
+      <p style="font-size:12.5px;line-height:1.7;">${esc(p.role_summary)}</p>
+    </div>` : ''}
+
+    ${p.company_summary ? `
+    <div class="prep-section">
+      <span class="prep-badge badge-predicted">AI general knowledge — verify independently</span>
+      <div class="mini-lbl" style="margin-top:2px;">Company summary</div>
+      <p style="font-size:12.5px;line-height:1.7;">${esc(p.company_summary)}</p>
+    </div>` : ''}
+
+    ${listSection('Your relevant experience for this role', p.relevant_experience, 'badge-verified', 'From your resume')}
+    ${starHTML}
+    ${listSection('Likely recruiter-screen questions', p.recruiter_questions, 'badge-predicted', 'AI-predicted')}
+    ${listSection('Likely behavioral questions', p.behavioral_questions, 'badge-predicted', 'AI-predicted')}
+    ${listSection('Likely technical questions', p.technical_questions, 'badge-predicted', 'AI-predicted')}
+    ${listSection('Technical topics to review', p.technical_topics, 'badge-predicted', 'AI-predicted')}
+    ${listSection('Areas you may get challenged on', p.weak_areas, 'badge-predicted', 'AI-predicted')}
+    ${listSection('Questions to ask the interviewer', p.questions_to_ask, 'badge-predicted', 'AI-predicted')}
+    ${listSection('Application-specific talking points', p.talking_points, 'badge-predicted', 'AI-predicted')}
+
+    ${p.compensation_notes ? `
+    <div class="prep-section">
+      <span class="prep-badge badge-predicted">AI-predicted — general guidance</span>
+      <div class="mini-lbl" style="margin-top:2px;">Compensation notes</div>
+      <p style="font-size:12.5px;line-height:1.7;">${esc(p.compensation_notes)}</p>
+    </div>` : ''}
+  `;
+}
+
+function detailHTML(entry) {
+  const statusOptions = STATUSES.map(s => `<option value="${s}" ${s===entry.status?'selected':''}>${s}</option>`).join('');
+  const history = (entry.statusHistory||[]).slice().reverse().map(h =>
+    `<div class="history-item">${formatDate(h.changedAt)} — ${h.from ? h.from + ' → ' : ''}${h.to}${h.note ? ' (' + esc(h.note) + ')' : ''}</div>`
+  ).join('');
+
+  const sourceJobHTML = entry.sourceJobId ? `
+    <div style="margin-bottom:12px;padding:10px 12px;background:var(--info-light);border-radius:var(--radius);font-size:12px;">
+      <a href="/jobs.html#${esc(entry.sourceJobId)}" style="color:var(--info);font-weight:500;">🔗 View original job in Job Inbox</a>
+      ${entry.sourceMatchScore ? ` — scored <strong>${esc(String(entry.sourceMatchScore.overall))}</strong> (${esc(entry.sourceMatchScore.recommendation)}) at intake` : ''}
+    </div>` : '';
+
+  return `
+    ${sourceJobHTML}
+    ${entry.jobUrl ? `<div style="margin-bottom:12px;"><a href="${esc(safeHref(entry.jobUrl))}" target="_blank" rel="noopener" style="font-size:12px;color:var(--info);">${esc(entry.jobUrl)}</a></div>` : ''}
+
+    <div class="field-row">
+      <div>
+        <label class="mini-lbl">Status</label>
+        <select id="status-${entry.id}" onchange="updateStatus('${entry.id}')">${statusOptions}</select>
+      </div>
+      <div>
+        <label class="mini-lbl">Follow-up date</label>
+        <input type="date" id="followup-${entry.id}" value="${entry.followUpDate ? entry.followUpDate.slice(0,10) : ''}" onchange="saveFields('${entry.id}')">
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div>
+        <label class="mini-lbl">Salary range</label>
+        <input type="text" id="salary-${entry.id}" value="${esc(entry.salaryRange)}" placeholder="e.g. $120K - $140K" onblur="saveFields('${entry.id}')">
+      </div>
+      <div>
+        <label class="mini-lbl">Rejection reason (if applicable)</label>
+        <input type="text" id="rejection-${entry.id}" value="${esc(entry.rejectionReason)}" placeholder="e.g. Went with internal candidate" onblur="saveFields('${entry.id}')">
+      </div>
+    </div>
+
+    <label class="mini-lbl">Notes</label>
+    <textarea id="notes-${entry.id}" onblur="saveFields('${entry.id}')" placeholder="Recruiter contact, interview notes, next steps...">${esc(entry.notes)}</textarea>
+
+    ${entry.jobDescription ? `<label class="mini-lbl" style="margin-top:12px;">Job description</label><pre class="resume-pre" style="max-height:180px;">${esc(entry.jobDescription)}</pre>` : ''}
+
+    <label class="mini-lbl" style="margin-top:4px;">Resume sent</label>
+    <pre class="resume-pre">${esc(entry.resumeText)}</pre>
+
+    ${entry.coverLetterText ? `<label class="mini-lbl">Cover letter sent</label><pre class="resume-pre">${esc(entry.coverLetterText)}</pre>` : ''}
+
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+        <label class="mini-lbl" style="margin-bottom:0;">Interview Prep</label>
+        <button class="btn-sec" id="prep-btn-${entry.id}" onclick="generateInterviewPrep('${entry.id}')">${entry.interviewPrep ? '🔄 Regenerate' : '✨ Generate Interview Prep'}</button>
+      </div>
+      <div id="prep-content-${entry.id}">${interviewPrepHTML(entry)}</div>
+    </div>
+
+    ${history ? `<label class="mini-lbl">Status history</label><div class="history-list">${history}</div>` : ''}
+
+    <div class="btn-row">
+      <button class="btn-sec" onclick="copyText('${entry.id}')">Copy resume text</button>
+      <button class="btn-danger" onclick="deleteEntry('${entry.id}')">Delete</button>
+    </div>
+    <div id="save-status-${entry.id}" style="font-size:11px;font-family:var(--mono);color:var(--accent-mid);margin-top:6px;"></div>
+  `;
+}
+
+async function generateInterviewPrep(id) {
+  const btn = document.getElementById('prep-btn-' + id);
+  const container = document.getElementById('prep-content-' + id);
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Generating...';
+  try {
+    const resp = await fetch('/applications/' + id + '/interview-prep', { method: 'POST' });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Failed to generate interview prep');
+
+    // Update the in-memory record so re-expanding the card doesn't re-fetch stale data.
+    const app = allApps.find(a => a.id === id);
+    const entryForRender = { id, interviewPrep: data.interviewPrep };
+    container.innerHTML = interviewPrepHTML(entryForRender);
+    btn.textContent = '🔄 Regenerate';
+    showToast('Interview prep generated');
+  } catch(e) {
+    showToast('Failed to generate interview prep: ' + e.message);
+    btn.textContent = originalLabel;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function updateStatus(id) {
+  const status = document.getElementById('status-' + id).value;
+  try {
+    await fetch('/applications/' + id + '/status', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    showToast('Status updated to ' + status);
+    // Refresh the whole list so the card moves to its new status group.
+    document.getElementById('detail-' + id).dataset.loaded = '';
+    await loadTracker();
+  } catch(e) {
+    showToast('Failed to update status: ' + e.message);
+  }
+}
+
+async function saveFields(id) {
+  const notesEl = document.getElementById('notes-' + id);
+  const followupEl = document.getElementById('followup-' + id);
+  const salaryEl = document.getElementById('salary-' + id);
+  const rejectionEl = document.getElementById('rejection-' + id);
+  const payload = {
+    notes: notesEl ? notesEl.value : undefined,
+    followUpDate: followupEl && followupEl.value ? followupEl.value : null,
+    salaryRange: salaryEl ? salaryEl.value : undefined,
+    rejectionReason: rejectionEl ? rejectionEl.value : undefined
+  };
+  try {
+    await fetch('/applications/' + id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const statusEl = document.getElementById('save-status-' + id);
+    if (statusEl) {
+      statusEl.textContent = '✓ Saved';
+      setTimeout(() => { statusEl.textContent = ''; }, 1500);
+    }
+  } catch(e) {
+    showToast('Failed to save: ' + e.message);
+  }
+}
+
+function copyText(id) {
+  const pre = document.querySelector('#detail-' + id + ' .resume-pre');
+  if (!pre) return;
+  navigator.clipboard.writeText(pre.textContent).then(() => showToast('Copied to clipboard!'));
+}
+
+async function deleteEntry(id) {
+  if (!confirm('Delete this application from the tracker? This cannot be undone.')) return;
+  await fetch('/applications/' + id, { method: 'DELETE' });
+  allApps = allApps.filter(a => a.id !== id);
+  showToast('Deleted');
+  renderFilterRow();
+  renderTracker();
+}
+
+loadTracker();
+</script>
+</body>
+</html>

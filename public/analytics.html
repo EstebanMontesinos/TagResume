@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Analytics</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --accent:#1D9E75; --accent-light:#E1F5EE; --accent-mid:#0F6E56;
+      --danger:#A32D2D; --danger-light:#FCEBEB;
+      --warn:#BA7517; --warn-light:#FAEEDA;
+      --info:#185FA5; --info-light:#E6F1FB;
+      --bg:#f9f9f8; --surface:#fff;
+      --border:rgba(0,0,0,0.1); --border-strong:rgba(0,0,0,0.2);
+      --text:#1a1a1a; --muted:#6b6b6b;
+      --radius:10px; --sans:'DM Sans',sans-serif; --mono:'DM Mono',monospace; --serif:'Instrument Serif',serif;
+    }
+    body { font-family:var(--sans); background:var(--bg); color:var(--text); min-height:100vh; }
+    .shell { max-width:1000px; margin:0 auto; padding:2.5rem 1.5rem 4rem; }
+
+    .header { display:flex; align-items:center; justify-content:space-between; margin-bottom:2rem; padding-bottom:1.5rem; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:12px; }
+    .header h1 { font-family:var(--serif); font-size:26px; font-weight:400; }
+    .header h1 em { color:var(--accent); font-style:italic; }
+    .back-btn { padding:8px 16px; background:var(--surface); border:1px solid var(--border-strong); border-radius:var(--radius); font-size:13px; font-family:var(--sans); cursor:pointer; color:var(--text); text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+    .back-btn:hover { background:#f0f0ef; }
+
+    .section { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem; margin-bottom:1.25rem; }
+    .section-title { font-size:15px; font-weight:500; margin-bottom:4px; }
+    .section-sub { font-size:12px; color:var(--muted); margin-bottom:1rem; line-height:1.6; }
+
+    .empty-note { font-size:12.5px; color:var(--muted); text-align:center; padding:1.5rem; }
+
+    .funnel-row { display:flex; gap:10px; flex-wrap:wrap; }
+    .funnel-stage { flex:1; min-width:130px; border:1px solid var(--border); border-radius:var(--radius); padding:14px; text-align:center; position:relative; }
+    .funnel-stage .n { font-family:var(--mono); font-size:26px; font-weight:500; }
+    .funnel-stage .lbl { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.03em; margin-top:4px; }
+    .funnel-stage .conv { font-size:11px; font-family:var(--mono); margin-top:8px; padding:2px 8px; border-radius:20px; display:inline-block; }
+    .conv-good { background:var(--accent-light); color:var(--accent-mid); }
+    .conv-mid { background:var(--warn-light); color:var(--warn); }
+    .conv-low { background:var(--danger-light); color:var(--danger); }
+    .funnel-arrow { display:flex; align-items:center; color:var(--border-strong); font-size:18px; }
+
+    .stat-row { display:flex; gap:12px; flex-wrap:wrap; margin-top:14px; }
+    .stat-box { flex:1; min-width:160px; border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px; }
+    .stat-box .n { font-family:var(--mono); font-size:20px; font-weight:500; }
+    .stat-box .lbl { font-size:11px; color:var(--muted); margin-top:2px; }
+
+    table { width:100%; border-collapse:collapse; font-size:12.5px; }
+    th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); }
+    th { font-size:10px; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted); font-family:var(--mono); font-weight:500; }
+    td.num { font-family:var(--mono); text-align:right; }
+    th.num { text-align:right; }
+    tr:last-child td { border-bottom:none; }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <div class="header">
+    <h1>Application <em>Analytics</em></h1>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <a href="/jobs.html" class="back-btn">📥 Jobs</a>
+      <a href="/tracker.html" class="back-btn">📋 Tracker</a>
+      <a href="/vault.html" class="back-btn">🗄️ Vault</a>
+      <a href="/profile.html" class="back-btn">👤 Profile</a>
+      <a href="/" class="back-btn">← Back to Optimizer</a>
+    </div>
+  </div>
+
+  <div id="content">
+    <div class="empty-note">Loading...</div>
+  </div>
+</div>
+
+<script>
+// Ordered pipeline for the real funnel. "Saved" isn't included -- it's a
+// pre-application bucket (like the Job Inbox), not a stage you "convert"
+// out of the way Applied/Screen/Interview/Offer are.
+const STAGES = ['Applied', 'Recruiter Screen', 'Interview', 'Offer'];
+
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+// An application's CURRENT status only tells you where it ended up, not what
+// it passed through -- an app currently "Rejected" may well have reached
+// Recruiter Screen or Interview first. statusHistory (kept on every
+// application since the Tracker was built) records every transition, so the
+// funnel is built from "stages ever reached", not current status.
+function reachedStages(app) {
+  return new Set((app.statusHistory || []).map(h => h.to));
+}
+
+function computeStageCounts(apps) {
+  const counts = {};
+  STAGES.forEach(s => { counts[s] = 0; });
+  apps.forEach(app => {
+    const reached = reachedStages(app);
+    STAGES.forEach(s => { if (reached.has(s)) counts[s]++; });
+  });
+  return counts;
+}
+
+function convClass(pct) { return pct >= 50 ? 'conv-good' : pct >= 25 ? 'conv-mid' : 'conv-low'; }
+
+function funnelHTML(apps) {
+  const counts = computeStageCounts(apps);
+  const parts = [];
+  STAGES.forEach((stage, i) => {
+    if (i > 0) parts.push(`<div class="funnel-arrow">→</div>`);
+    let convHTML = '';
+    if (i > 0) {
+      const prev = counts[STAGES[i - 1]];
+      const pct = prev > 0 ? Math.round((counts[stage] / prev) * 100) : 0;
+      convHTML = `<div class="conv ${convClass(pct)}">${pct}% of ${esc(STAGES[i-1])}</div>`;
+    }
+    parts.push(`
+      <div class="funnel-stage">
+        <div class="n">${counts[stage]}</div>
+        <div class="lbl">${esc(stage)}</div>
+        ${convHTML}
+      </div>`);
+  });
+  return `<div class="funnel-row">${parts.join('')}</div>`;
+}
+
+// Compact per-group stats used in the breakdown tables (source/company/variant).
+function groupStats(apps) {
+  const counts = computeStageCounts(apps);
+  const applied = counts['Applied'];
+  const screenPlus = counts['Recruiter Screen'];
+  const responseRate = applied > 0 ? Math.round((screenPlus / applied) * 100) : null;
+  return { applied, screenPlus, interviewPlus: counts['Interview'], offer: counts['Offer'], responseRate };
+}
+
+function breakdownTable(apps, keyFn, columnLabel, minGroupSize) {
+  const groups = {};
+  apps.forEach(app => {
+    const key = keyFn(app) || 'Unspecified';
+    (groups[key] = groups[key] || []).push(app);
+  });
+  const rows = Object.keys(groups)
+    .map(key => ({ key, apps: groups[key], stats: groupStats(groups[key]) }))
+    .filter(r => r.apps.length >= (minGroupSize || 1))
+    .sort((a, b) => b.stats.applied - a.stats.applied);
+
+  if (!rows.length) return null;
+
+  return `
+    <table>
+      <thead><tr>
+        <th>${esc(columnLabel)}</th>
+        <th class="num">Applied</th>
+        <th class="num">Screen+</th>
+        <th class="num">Interview+</th>
+        <th class="num">Offer</th>
+        <th class="num">Response Rate</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(r => `
+          <tr>
+            <td>${esc(r.key)}</td>
+            <td class="num">${r.stats.applied}</td>
+            <td class="num">${r.stats.screenPlus}</td>
+            <td class="num">${r.stats.interviewPlus}</td>
+            <td class="num">${r.stats.offer}</td>
+            <td class="num">${r.stats.responseRate != null ? r.stats.responseRate + '%' : '—'}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function loadAnalytics() {
+  const el = document.getElementById('content');
+  try {
+    const r = await fetch('/applications/list');
+    const allApps = await r.json();
+
+    if (!allApps.length) {
+      el.innerHTML = `<div class="section"><div class="empty-note">No applications tracked yet. Save a tailored resume to the Tracker to start building analytics.</div></div>`;
+      return;
+    }
+
+    // Only applications that were ever actually submitted count toward the
+    // funnel -- "Saved" (tailored but not yet applied) isn't a funnel stage.
+    const everApplied = allApps.filter(a => reachedStages(a).has('Applied'));
+
+    let html = '';
+
+    html += `<div class="section">
+      <div class="section-title">Funnel</div>
+      <div class="section-sub">Based on every status change recorded (statusHistory), not just current status -- an application currently marked Rejected still counts toward every stage it reached before that.</div>
+      ${everApplied.length ? funnelHTML(everApplied) : `<div class="empty-note">No applications have been marked "Applied" yet.</div>`}
+    </div>`;
+
+    const rejectedCount = allApps.filter(a => a.status === 'Rejected').length;
+    const savedCount = allApps.filter(a => a.status === 'Saved').length;
+    html += `<div class="section">
+      <div class="stat-row">
+        <div class="stat-box"><div class="n">${allApps.length}</div><div class="lbl">Total tracked</div></div>
+        <div class="stat-box"><div class="n">${savedCount}</div><div class="lbl">Saved, not yet applied</div></div>
+        <div class="stat-box"><div class="n">${everApplied.length}</div><div class="lbl">Ever applied</div></div>
+        <div class="stat-box"><div class="n">${rejectedCount}</div><div class="lbl">Currently rejected</div></div>
+      </div>
+    </div>`;
+
+    const sourceTable = breakdownTable(everApplied, a => a.source, 'Source');
+    html += `<div class="section">
+      <div class="section-title">By Source</div>
+      <div class="section-sub">Where the application came from (LinkedIn, Indeed, referral, etc.) vs. how far it got.</div>
+      ${sourceTable || `<div class="empty-note">No source data recorded yet -- set a source when saving to the Tracker.</div>`}
+    </div>`;
+
+    const companyTable = breakdownTable(everApplied, a => a.company, 'Company');
+    html += `<div class="section">
+      <div class="section-title">By Company</div>
+      ${companyTable || `<div class="empty-note">Not enough data yet.</div>`}
+    </div>`;
+
+    const distinctVariants = new Set(everApplied.map(a => (a.resumeVariant || '').trim()).filter(Boolean));
+    if (distinctVariants.size >= 2) {
+      const variantTable = breakdownTable(everApplied, a => (a.resumeVariant || '').trim(), 'Resume Variant');
+      html += `<div class="section">
+        <div class="section-title">By Resume Variant</div>
+        <div class="section-sub">Which resume version actually gets responses.</div>
+        ${variantTable}
+      </div>`;
+    } else {
+      html += `<div class="section">
+        <div class="section-title">By Resume Variant</div>
+        <div class="section-sub">Tag a "Resume variant" (e.g. "Consultant", "PM") when saving to the Tracker -- once at least two variants have data, this breakdown appears here automatically.</div>
+        <div class="empty-note">Not enough tagged data yet (${distinctVariants.size} variant${distinctVariants.size === 1 ? '' : 's'} tagged so far).</div>
+      </div>`;
+    }
+
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = `<div class="section"><div style="color:var(--danger);font-size:13px;font-family:var(--mono);">Could not load analytics: ${e.message}</div></div>`;
+  }
+}
+
+loadAnalytics();
+</script>
+</body>
+</html>

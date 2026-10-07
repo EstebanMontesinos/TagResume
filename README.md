@@ -95,7 +95,10 @@ See `.env.example` for all supported variables.
 resume-optimizer/
 ├── server.js          ← Express proxy server (keeps API key secure)
 ├── lib/
-│   └── resume-line-parser.js  ← shared resume line-classification + 2-page enforcer
+│   ├── resume-line-parser.js  ← shared resume line-classification + 2-page enforcer
+│   ├── resume-sections.js     ← parses resume text into structured sections
+│   └── designed-resume-pdf.js ← sidebar-layout PDF renderer
+├── fonts/                     ← Carlito (SIL OFL) used by the designed PDF
 ├── test/
 │   └── resume-line-parser.test.js
 ├── .env                ← Your API key (never commit this)
@@ -196,6 +199,24 @@ at a glance which jobs you've already acted on.
 
 This reuses the same MongoDB connection as the Vault/Tracker/Profile (a
 separate `jobs` collection) — no additional database setup required.
+
+## Designed Resume PDF
+
+After tailoring, **"🎨 Download designed PDF"** (next to the regular download) renders the
+same text you see and edit into a presentation-ready layout: dark sidebar with contact,
+skills, education, certifications, languages and awards, a gold-accented main column with
+summary and experience, and Carlito typography (metric-compatible with Calibri). It was
+built by measuring a reference resume, so spacing, hierarchy and alignment follow it
+closely. Add an optional headshot on `/profile.html` (resized in your browser, stored in
+your Profile) and it appears in the sidebar; contact details fall back to your Profile when
+the resume text doesn't contain them.
+
+Notes: text stays real, selectable text (not images), so ATS parsers can read it, but
+two-column layouts are read in a different order than single-column ones — keep using the
+plain download for portals that want a simple file. If a resume runs long it shrinks
+slightly to stay within two pages. Code: `lib/resume-sections.js` (parsing),
+`lib/designed-resume-pdf.js` (layout), `fonts/` (Carlito, SIL OFL), route
+`POST /generate-designed-pdf`.
 
 ## MongoDB Setup (Free — Vault storage)
 

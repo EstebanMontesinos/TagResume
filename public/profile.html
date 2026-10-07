@@ -71,7 +71,7 @@
 
   <div class="section">
     <div class="section-title">Contact Info</div>
-    <div class="section-sub">Used as a reference — not yet auto-inserted into tailored resumes.</div>
+    <div class="section-sub">Used by the designed resume PDF (contact details and headshot appear in its sidebar when your resume text doesn't already include them) and by Fill-Assist below.</div>
     <div class="field-row">
       <div><label class="mini-lbl">Full name</label><input type="text" id="p-fullName"></div>
       <div><label class="mini-lbl">Email</label><input type="email" id="p-email"></div>
@@ -86,6 +86,21 @@
     </div>
     <button class="btn-primary" onclick="saveProfile()">Save Contact Info</button>
     <div class="save-status" id="contact-save-status"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Headshot (optional)</div>
+    <div class="section-sub">Shown in the sidebar of the designed resume PDF. It's resized in your browser and stored in your Profile only. Skip it and the design simply omits the photo. Note: some employers prefer résumés without photos (common in the US) — it's your call per application.</div>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <img id="photo-preview" alt="" style="display:none;width:84px;height:84px;object-fit:cover;border-radius:8px;border:2px solid #B08A3E;">
+      <div>
+        <input type="file" id="photo-input" accept="image/jpeg,image/png" onchange="handlePhotoUpload(this)" style="font-size:12.5px;">
+        <div style="margin-top:6px;display:flex;gap:8px;align-items:center;">
+          <button class="btn-danger" id="photo-remove" style="display:none;" onclick="removePhoto()">Remove photo</button>
+          <span class="save-status" id="photo-status" style="margin-top:0;"></span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="section">
@@ -346,6 +361,48 @@ async function handleProfileResumeUpload(input) {
   }
 }
 
+// Headshot: center-crop to a square, downscale to 400px, re-encode as JPEG so
+// the stored data URL stays small (~30-60KB) regardless of the original photo.
+function showPhoto(dataUrl) {
+  const img = document.getElementById('photo-preview');
+  img.style.display = dataUrl ? 'block' : 'none';
+  if (dataUrl) img.src = dataUrl;
+  document.getElementById('photo-remove').style.display = dataUrl ? 'inline-block' : 'none';
+}
+async function savePhoto(dataUrl) {
+  const st = document.getElementById('photo-status');
+  try {
+    const r = await fetch('/profile', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ photoDataUrl: dataUrl }) });
+    if (!r.ok) throw new Error((await r.json()).error || 'Save failed');
+    profile = await r.json();
+    showPhoto(profile.photoDataUrl);
+    st.style.color = 'var(--accent-mid)'; st.textContent = dataUrl ? '✓ Photo saved' : '✓ Photo removed';
+    setTimeout(() => { st.textContent = ''; }, 2000);
+  } catch(e) {
+    st.style.color = 'var(--danger)'; st.textContent = 'Error: ' + e.message;
+  }
+}
+function handlePhotoUpload(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const st = document.getElementById('photo-status');
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const side = Math.min(img.width, img.height), SIZE = 400;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = SIZE;
+      canvas.getContext('2d').drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, SIZE, SIZE);
+      savePhoto(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => { st.style.color = 'var(--danger)'; st.textContent = 'Could not read that image.'; };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+function removePhoto() { document.getElementById('photo-input').value = ''; savePhoto(''); }
+
 async function loadProfile() {
   try {
     const r = await fetch('/profile');
@@ -361,6 +418,7 @@ async function loadProfile() {
     document.getElementById('p-certificationsSummary').value = profile.certificationsSummary || '';
     document.getElementById('p-educationSummary').value = profile.educationSummary || '';
     renderResumeList();
+    showPhoto(profile.photoDataUrl);
     buildBookmarklet();
   } catch(e) {
     document.querySelector('.shell').insertAdjacentHTML('afterbegin',

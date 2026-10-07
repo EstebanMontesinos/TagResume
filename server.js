@@ -8,6 +8,8 @@ const {
   AlignmentType, LevelFormat, BorderStyle, TabStopType
 } = require('docx');
 const PDFDocument = require('pdfkit');
+const { parseResume } = require('./lib/resume-sections');
+const { renderDesignedResume } = require('./lib/designed-resume-pdf');
 const {
   isSectionHeader, isJobLine, isBullet, weighLines, enforeTwoPages,
   LINES_PER_PAGE, TWO_PAGE_BUDGET
@@ -386,7 +388,7 @@ app.post('/applications/:id/interview-prep', rateLimit, async (req, res) => {
 const PROFILE_ID = 'main';
 const DEFAULT_PROFILE = {
   _id: PROFILE_ID,
-  fullName: '', email: '', phone: '', linkedinUrl: '', portfolioUrl: '', workAuthorization: '',
+  fullName: '', email: '', phone: '', linkedinUrl: '', portfolioUrl: '', workAuthorization: '', photoDataUrl: '',
   employmentHistorySummary: '', skillsSummary: '', certificationsSummary: '', educationSummary: '',
   baseResumes: [],
   updatedAt: null
@@ -413,8 +415,18 @@ app.put('/profile', async (req, res) => {
   try {
     const FIELDS = [
       'fullName', 'email', 'phone', 'linkedinUrl', 'portfolioUrl', 'workAuthorization',
-      'employmentHistorySummary', 'skillsSummary', 'certificationsSummary', 'educationSummary'
+      'employmentHistorySummary', 'skillsSummary', 'certificationsSummary', 'educationSummary',
+      'photoDataUrl'
     ];
+    // Optional headshot for the designed resume PDF. Stored as a small
+    // data URL (the Profile page downsizes it before upload); anything else
+    // is rejected so arbitrary data can't end up in this field.
+    if (req.body && req.body.photoDataUrl) {
+      const ph = String(req.body.photoDataUrl);
+      if (!/^data:image\/(jpeg|jpg|png);base64,[A-Za-z0-9+/=]+$/.test(ph) || ph.length > 600000) {
+        return res.status(400).json({ error: 'photoDataUrl must be a JPEG/PNG data URL under ~450KB' });
+      }
+    }
     const set = { updatedAt: new Date() };
     for (const field of FIELDS) {
       if (Object.prototype.hasOwnProperty.call(req.body, field)) set[field] = req.body[field];
@@ -902,6 +914,39 @@ app.post('/generate-docx', async (req, res) => {
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', 'attachment; filename="resume_optimized.docx"');
     res.send(buffer);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Designed PDF generator ───────────────────────────────────────────────────
+// Presentation-ready layout (sidebar, photo, accent colors) built from the
+// same optimized resume text -- see lib/resume-sections.js (parsing) and
+// lib/designed-resume-pdf.js (layout). Contact details and photo fall back to
+// the Candidate Profile when the resume text/request doesn't carry them.
+app.post('/generate-designed-pdf', async (req, res) => {
+  try {
+    const rawText = (req.body && req.body.text) || '';
+    if (!rawText.trim()) return res.status(400).json({ error: 'text required' });
+
+    let profile = null;
+    try { profile = await getOrCreateProfile(await getDB()); } catch (e) { /* no DB: render without profile extras */ }
+
+    const data = parseResume(enforeTwoPages(rawText));
+    if (!data.name && profile && profile.fullName) data.name = profile.fullName;
+    if (!data.contact.length && profile) {
+      if (profile.phone) data.contact.push({ label: 'Phone', value: profile.phone });
+      if (profile.email) data.contact.push({ label: 'Email', value: profile.email });
+      if (profile.linkedinUrl) data.contact.push({ label: 'LinkedIn', value: profile.linkedinUrl.replace(/^https?:\/\/(www\.)?/i, '') });
+      if (profile.portfolioUrl) data.contact.push({ label: 'Web', value: profile.portfolioUrl.replace(/^https?:\/\/(www\.)?/i, '') });
+    }
+    const photoDataUrl = (req.body && req.body.photoDataUrl) || (profile && profile.photoDataUrl) || null;
+
+    const out = await renderDesignedResume(data, { photoDataUrl });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="resume_designed.pdf"');
+    res.send(out.buffer);
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: e.message });

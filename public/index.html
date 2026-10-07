@@ -1056,6 +1056,7 @@ function renderFull(d) {
     <div class="btn-row" style="margin-top:10px;">
       <button class="btn-secondary" id="copy-btn">Copy text</button>
       <button class="btn-accent" id="dl-btn">&#11015; Download .${fmt}</button>
+      <button class="btn-accent" id="dl-designed-btn" style="background:#1F3B3C;" title="Polished two-column design with sidebar and optional photo (set it in Profile)">&#127912; Download designed PDF</button>
       <button class="btn-secondary" id="save-vault-btn" style="border-color:#9FE1CB;color:#0F6E56;" onclick="showSaveVaultModal()">🗄️ Save to Vault</button>
       <button class="btn-secondary" id="save-tracker-btn" style="border-color:#9FBEE1;color:#185FA5;" onclick="showSaveTrackerModal()">📋 Save to Tracker</button>
       <button class="btn-secondary" id="reset-opt-btn" title="Revert to the AI-generated version, discarding your edits">↺ Reset edits</button>
@@ -1068,6 +1069,7 @@ function renderFull(d) {
       .then(() => { this.textContent = 'Copied!'; setTimeout(() => { this.textContent = 'Copy text'; }, 2000); });
   });
   document.getElementById('dl-btn').addEventListener('click', downloadFormatted);
+  document.getElementById('dl-designed-btn').addEventListener('click', downloadDesignedPdf);
   document.getElementById('reset-opt-btn').addEventListener('click', function() {
     if (!confirm('Discard your edits and restore the AI-generated resume text?')) return;
     renderFull(d);
@@ -1104,6 +1106,33 @@ async function downloadFormatted() {
   } catch(e) {
     errEl.textContent = 'Download failed: ' + e.message; errEl.style.display='block';
     btn.textContent = '⬇ Download .'+fmt; btn.disabled=false;
+  }
+}
+
+// Presentation-ready PDF (sidebar layout, accent colors, optional photo from
+// Profile). Built server-side from the same text you see/edit above, so what
+// you review is what gets designed. The plain download above stays available
+// for portals that want a simple single-column file.
+async function downloadDesignedPdf() {
+  const text  = document.getElementById('opt-pre').textContent.replace(/\[PLACEHOLDER:\s*/g, '[TODO: ');
+  const btn   = document.getElementById('dl-designed-btn');
+  const errEl = document.getElementById('dl-err');
+  errEl.style.display = 'none';
+  const label = btn.innerHTML;
+  btn.textContent = '\u23F3 Designing...'; btn.disabled = true;
+  try {
+    const resp = await fetch('/generate-designed-pdf', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ text })
+    });
+    if (!resp.ok) { const e = await resp.json(); throw new Error(e.error||'Server error'); }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(await resp.blob());
+    a.download = 'resume_designed.pdf'; a.click();
+    btn.textContent = '\u2713 Downloaded';
+    setTimeout(()=>{ btn.innerHTML = label; btn.disabled = false; }, 3000);
+  } catch(e) {
+    errEl.textContent = 'Designed PDF failed: ' + e.message; errEl.style.display = 'block';
+    btn.innerHTML = label; btn.disabled = false;
   }
 }
 

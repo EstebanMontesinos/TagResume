@@ -1032,7 +1032,8 @@ let _optOriginalText = '';
 function renderFull(d) {
   const raw = (d.optimized_resume||'').replace(/\\n/g,'\n');
   _optOriginalText = raw;
-  const fmt = uploadedFileType;
+  const fmt = uploadedFileType === 'pdf' ? 'docx' : uploadedFileType;
+  uploadedFileType = fmt;
   const phCount = (raw.match(/\[PLACEHOLDER:/g) || []).length;
 
   // Build highlighted HTML
@@ -1046,7 +1047,7 @@ function renderFull(d) {
       ${phCount ? '<span class="badge badge-amber">'+phCount+' gap placeholder'+(phCount>1?'s':'')+'</span>' : ''}
     </div>
     <div style="background:#E1F5EE;border:1px solid #9FE1CB;border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;font-size:12px;font-family:var(--mono);color:var(--accent-mid);">
-      ${fmt==='docx'?'📘':fmt==='pdf'?'📕':'📄'} Download will produce a <strong>.${fmt}</strong> file matching your original format. ✏️ Click into the resume below to edit or tweak anything before downloading.
+      ${fmt==='docx'?'📘':fmt==='pdf'?'📕':'📄'} Download will produce a <strong>.${fmt}</strong> file. ✏️ Click into the resume below to edit or tweak anything before downloading.
     </div>
     ${phCount ? `<div style="background:#FAEEDA;border:1px solid #FAC775;border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:12px;line-height:1.6;color:#7A4E0A;">
       <strong>⚠️ `+phCount+` gap placeholder`+(phCount>1?'s are':' is')+` highlighted in amber.</strong>
@@ -1056,6 +1057,11 @@ function renderFull(d) {
     <div class="btn-row" style="margin-top:10px;">
       <button class="btn-secondary" id="copy-btn">Copy text</button>
       <button class="btn-accent" id="dl-btn">&#11015; Download .${fmt}</button>
+      <select id="fmt-select" onchange="changeFormat(this.value)" style="margin-left:8px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--sans);background:var(--surface);color:var(--text);cursor:pointer;">
+        <option value="docx" ${fmt==='docx'?'selected':''}>Word (.docx)</option>
+        <option value="pdf" ${fmt==='pdf'?'selected':''}>PDF (.pdf)</option>
+        <option value="txt" ${fmt==='txt'?'selected':''}>Text (.txt)</option>
+      </select>
       <button class="btn-accent" id="dl-designed-btn" style="background:#1F3B3C;" title="Polished two-column design with sidebar and optional photo (set it in Profile)">&#127912; Download designed PDF</button>
       <button class="btn-secondary" id="save-vault-btn" style="border-color:#9FE1CB;color:#0F6E56;" onclick="showSaveVaultModal()">🗄️ Save to Vault</button>
       <button class="btn-secondary" id="save-tracker-btn" style="border-color:#9FBEE1;color:#185FA5;" onclick="showSaveTrackerModal()">📋 Save to Tracker</button>
@@ -1074,6 +1080,12 @@ function renderFull(d) {
     if (!confirm('Discard your edits and restore the AI-generated resume text?')) return;
     renderFull(d);
   });
+}
+
+function changeFormat(newFmt) {
+  uploadedFileType = newFmt;
+  const btn = document.getElementById('dl-btn');
+  if (btn) btn.textContent = '⬇ Download .' + newFmt;
 }
 
 async function downloadFormatted() {

@@ -17,6 +17,8 @@ test('isSectionHeader matches known headers case-insensitively', () => {
   assert.equal(isSectionHeader('experience'), true);
   assert.equal(isSectionHeader('SKILLS'), true);
   assert.equal(isSectionHeader('Professional Summary'), true);
+  assert.equal(isSectionHeader('FORMACIÓN ACADÉMICA'), true);
+  assert.equal(isSectionHeader('Experiencia profesional'), true);
   assert.equal(isSectionHeader('Random bullet text'), false);
 });
 
@@ -72,6 +74,37 @@ test('enforeTwoPages is a no-op when the resume already fits the budget', () => 
     'State University'
   ].join('\n');
   assert.equal(enforeTwoPages(shortResume), shortResume);
+});
+
+test('enforeTwoPages preserves Spanish education and language footer sections', () => {
+  const bullets = makeLongBullets(60);
+  const longResume = [
+    'Jane Doe',
+    'Ingeniera de software',
+    '',
+    'EXPERIENCIA',
+    'Acme | Ingeniera | 2019 – Present',
+    ...bullets,
+    '',
+    'HABILIDADES',
+    'JavaScript · React',
+    '',
+    'EDUCACIÓN',
+    'Universidad Estatal',
+    '',
+    'CERTIFICACIONES',
+    'Certificación profesional',
+    '',
+    'IDIOMAS',
+    'Español (Nativo)'
+  ].join('\n');
+
+  assert.ok(weighLines(longResume.split('\n')) > TWO_PAGE_BUDGET);
+  const trimmed = enforeTwoPages(longResume);
+  assert.match(trimmed, /HABILIDADES\nJavaScript · React/);
+  assert.match(trimmed, /EDUCACIÓN\nUniversidad Estatal/);
+  assert.match(trimmed, /CERTIFICACIONES\nCertificación profesional/);
+  assert.match(trimmed, /IDIOMAS\nEspañol \(Nativo\)/);
 });
 
 function makeLongBullets(count) {

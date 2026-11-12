@@ -3,9 +3,26 @@
   "version": "1.0.0",
   "description": "",
   "main": "server.js",
+  "bin": "launcher.js",
   "scripts": {
     "start": "node server.js",
     "test": "node --test test/*.test.js"
+  },
+  "pkg": {
+    "scripts": [
+      "server.js",
+      "lib/**/*.js"
+    ],
+    "assets": [
+      "public/**/*",
+      "node_modules/docx/**/*",
+      "node_modules/pdfkit/**/*",
+      "node_modules/mammoth/**/*"
+    ],
+    "targets": [
+      "node18-win-x64"
+    ],
+    "outputPath": "dist"
   },
   "keywords": [],
   "author": "",

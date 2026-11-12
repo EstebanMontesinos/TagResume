@@ -50,6 +50,52 @@ test('parseResume splits header, contact, jobs, skills, lists', () => {
   assert.deepEqual(d.awards, ["Dean's List", 'COSGC Award']);
 });
 
+test('parseResume retains resume content under Spanish section headings', async () => {
+  const text = `JANE DOE
+Ingeniera de software
+jane@example.com
+
+RESUMEN PROFESIONAL
+Desarrolla soluciones para clientes.
+
+EXPERIENCIA PROFESIONAL
+Acme | Ingeniera | Ene 2021 – Actualidad
+• Entregó mejoras medibles.
+
+HABILIDADES TÉCNICAS
+Desarrollo: JavaScript · React
+
+FORMACIÓN ACADÉMICA
+Universidad Estatal
+Licenciatura en Ciencias
+
+CERTIFICACIONES
+Desarrolladora certificada
+
+IDIOMAS Y RECONOCIMIENTOS
+Idiomas: Español (Nativo) · Inglés (Avanzado)
+Reconocimientos: Premio Nacional
+
+PROYECTOS
+• Plataforma de análisis`;
+  const d = parseResume(text);
+  assert.equal(d.name, 'JANE DOE');
+  assert.equal(d.title, 'Ingeniera de software');
+  assert.equal(d.summary, 'Desarrolla soluciones para clientes.');
+  assert.equal(d.jobs.length, 1);
+  assert.equal(d.jobs[0].dates, 'Ene 2021 – Actualidad');
+  assert.deepEqual(d.jobs[0].bullets, ['Entregó mejoras medibles.']);
+  assert.deepEqual(d.skills[0], { category: 'Desarrollo', items: ['JavaScript', 'React'] });
+  assert.deepEqual(d.education, [['Universidad Estatal', 'Licenciatura en Ciencias']]);
+  assert.deepEqual(d.certs, ['Desarrolladora certificada']);
+  assert.deepEqual(d.languages, ['Español (Nativo)', 'Inglés (Avanzado)']);
+  assert.deepEqual(d.awards, ['Premio Nacional']);
+  assert.deepEqual(d.other, [{ title: 'PROYECTOS', lines: ['Plataforma de análisis'] }]);
+
+  const out = await renderDesignedResume(d, {});
+  assert.equal(out.buffer.slice(0, 5).toString(), '%PDF-');
+});
+
 test('parseJobHeader handles "Title — Company  dates" and pipe layouts', () => {
   const a = parseJobHeader('Business Development Analyst — Deloitte   Jun 2019 – Dec 2019');
   assert.equal(a.title, 'Business Development Analyst');

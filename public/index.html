@@ -1063,6 +1063,7 @@ function renderFull(d) {
         <option value="txt" ${fmt==='txt'?'selected':''}>Text (.txt)</option>
       </select>
       <button class="btn-accent" id="dl-designed-btn" style="background:#1F3B3C;" title="Polished two-column design with sidebar and optional photo (set it in Profile)">&#127912; Download designed PDF</button>
+      <button class="btn-accent" id="dl-ats-btn" style="background:#1F3864;" title="ATS-optimized single-column DOCX — clean formatting, keyword-rich, fully parseable">&#9989; Download ATS DOCX</button>
       <button class="btn-secondary" id="save-vault-btn" style="border-color:#9FE1CB;color:#0F6E56;" onclick="showSaveVaultModal()">🗄️ Save to Vault</button>
       <button class="btn-secondary" id="save-tracker-btn" style="border-color:#9FBEE1;color:#185FA5;" onclick="showSaveTrackerModal()">📋 Save to Tracker</button>
       <button class="btn-secondary" id="reset-opt-btn" title="Revert to the AI-generated version, discarding your edits">↺ Reset edits</button>
@@ -1076,6 +1077,7 @@ function renderFull(d) {
   });
   document.getElementById('dl-btn').addEventListener('click', downloadFormatted);
   document.getElementById('dl-designed-btn').addEventListener('click', downloadDesignedPdf);
+  document.getElementById('dl-ats-btn').addEventListener('click', downloadAtsDocs);
   document.getElementById('reset-opt-btn').addEventListener('click', function() {
     if (!confirm('Discard your edits and restore the AI-generated resume text?')) return;
     renderFull(d);
@@ -1144,6 +1146,30 @@ async function downloadDesignedPdf() {
     setTimeout(()=>{ btn.innerHTML = label; btn.disabled = false; }, 3000);
   } catch(e) {
     errEl.textContent = 'Designed PDF failed: ' + e.message; errEl.style.display = 'block';
+    btn.innerHTML = label; btn.disabled = false;
+  }
+}
+
+// -- ATS DOCX download --------------------------------------------------------
+async function downloadAtsDocs() {
+  const text  = document.getElementById('opt-pre').textContent.replace(/\[PLACEHOLDER:\s*/g, '[TODO: ');
+  const btn   = document.getElementById('dl-ats-btn');
+  const errEl = document.getElementById('dl-err');
+  errEl.style.display = 'none';
+  const label = btn.innerHTML;
+  btn.textContent = '⏳ Building...'; btn.disabled = true;
+  try {
+    const resp = await fetch('/generate-ats-docx', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ text })
+    });
+    if (!resp.ok) { const e = await resp.json(); throw new Error(e.error||'Server error'); }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(await resp.blob());
+    a.download = 'resume_ats.docx'; a.click();
+    btn.textContent = '✓ Downloaded';
+    setTimeout(()=>{ btn.innerHTML = label; btn.disabled = false; }, 3000);
+  } catch(e) {
+    errEl.textContent = 'ATS DOCX failed: ' + e.message; errEl.style.display = 'block';
     btn.innerHTML = label; btn.disabled = false;
   }
 }

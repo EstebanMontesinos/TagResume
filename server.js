@@ -953,6 +953,140 @@ app.post('/generate-designed-pdf', async (req, res) => {
   }
 });
 
+// ── ATS-Friendly DOCX generator ──────────────────────────────────────────────
+// Clean single-column layout: navy section headers with underline rules,
+// right-aligned dates via tab stop, bullet list, skill bold-category rows.
+// Optimized for ATS parsing — no tables, sidebars, or complex formatting.
+app.post('/generate-ats-docx', async (req, res) => {
+  try {
+    const { text: rawText } = req.body;
+    if (!rawText || !rawText.trim()) return res.status(400).json({ error: 'text required' });
+
+    const text = enforeTwoPages(rawText);
+    const lines = text.split('\n');
+    const FONT = 'Calibri';
+    const COLOR_NAME  = '1F3864';
+    const COLOR_TITLE = '2E5FAC';
+    const COLOR_HEAD  = '1F3864';
+    const COLOR_DATE  = '555555';
+
+    const children = [];
+
+    lines.forEach((raw, idx) => {
+      const line = raw.trimEnd().replace(/\*\*/g, '');
+      if (!line.trim()) {
+        children.push(new Paragraph({ children: [new TextRun('')], spacing: { after: 0 } }));
+        return;
+      }
+      // Name — first non-empty line
+      if (idx === 0) {
+        children.push(new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 0, after: 40 },
+          children: [new TextRun({ text: line.trim(), font: FONT, size: 32, bold: true, color: COLOR_NAME })]
+        })); return;
+      }
+      // Title / contact (lines 1-3 that aren't section headers or job lines)
+      if (idx < 4 && !isSectionHeader(line) && !isJobLine(line)) {
+        const isTitle = idx === 1;
+        children.push(new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: isTitle ? 30 : 100 },
+          children: [new TextRun({ text: line.trim(), font: FONT, size: isTitle ? 22 : 19, color: isTitle ? COLOR_TITLE : COLOR_DATE })]
+        })); return;
+      }
+      // Section header with navy underline rule
+      if (isSectionHeader(line)) {
+        children.push(new Paragraph({
+          spacing: { before: 180, after: 60 },
+          keepNext: true,
+          border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: COLOR_HEAD, space: 4 } },
+          children: [new TextRun({ text: line.trim(), font: FONT, size: 22, bold: true, color: COLOR_HEAD })]
+        })); return;
+      }
+      // Job header with right-aligned date tab stop
+      if (isJobLine(line)) {
+        const dateRx = /(.*?)\s{2,}((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)?\s*\d{4}\s*[–\-]\s*(?:\d{4}|Present))$/i;
+        const m = line.match(dateRx);
+        if (m) {
+          children.push(new Paragraph({
+            spacing: { before: 160, after: 20 },
+            keepNext: true,
+            tabStops: [{ type: TabStopType.RIGHT, position: 9360 }],
+            children: [
+              new TextRun({ text: m[1].trim(), font: FONT, size: 20, bold: true }),
+              new TextRun({ text: '\t' + m[2].trim(), font: FONT, size: 20, bold: true })
+            ]
+          }));
+        } else {
+          children.push(new Paragraph({
+            spacing: { before: 160, after: 20 },
+            keepNext: true,
+            children: [new TextRun({ text: line.trim(), font: FONT, size: 20, bold: true })]
+          }));
+        }
+        return;
+      }
+      // Bullet
+      if (isBullet(line)) {
+        const bulletText = line.replace(/^[\s]*[•\-\*]\s*/, '').trim();
+        children.push(new Paragraph({
+          numbering: { reference: 'ats-bullets', level: 0 },
+          spacing: { after: 40 },
+          children: [new TextRun({ text: bulletText, font: FONT, size: 20 })]
+        })); return;
+      }
+      // Skill line: "Category: skill · skill · skill"
+      const cleanLine = line.trim().replace(/\*\*/g, '');
+      const isSkillLine = /^[A-Za-z ,&]+:\s/.test(cleanLine) && (cleanLine.includes('·') || cleanLine.includes(','));
+      if (isSkillLine) {
+        const colonIdx = cleanLine.indexOf(':');
+        const category = cleanLine.slice(0, colonIdx).trim();
+        const skills   = cleanLine.slice(colonIdx + 1).trim();
+        children.push(new Paragraph({
+          spacing: { before: 0, after: 40 },
+          children: [
+            new TextRun({ text: category + ': ', font: FONT, size: 20, bold: true }),
+            new TextRun({ text: skills, font: FONT, size: 20 })
+          ]
+        })); return;
+      }
+      // Job title / subtitle line (italic blue)
+      const isSubtitle = /^[A-Z][a-z]/.test(line.trim()) && line.trim().split(' ').length <= 8 && !line.includes('•');
+      if (isSubtitle && idx > 3) {
+        children.push(new Paragraph({
+          spacing: { before: 0, after: 40 },
+          children: [new TextRun({ text: line.trim(), font: FONT, size: 20, italics: true, color: COLOR_TITLE })]
+        })); return;
+      }
+      // Normal body
+      children.push(new Paragraph({
+        spacing: { after: 40 },
+        children: [new TextRun({ text: line.trim(), font: FONT, size: 20 })]
+      }));
+    });
+
+    const doc = new Document({
+      numbering: { config: [{ reference: 'ats-bullets', levels: [{
+        level: 0, format: LevelFormat.BULLET, text: '•', alignment: AlignmentType.LEFT,
+        style: { paragraph: { indent: { left: 360, hanging: 200 }, spacing: { after: 40 } } }
+      }]}]},
+      sections: [{ properties: { page: {
+        size: { width: 12240, height: 15840 },
+        margin: { top: 900, right: 900, bottom: 900, left: 900 }
+      }}, children }]
+    });
+
+    const buffer = await Packer.toBuffer(doc);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', 'attachment; filename="resume_ats.docx"');
+    res.send(buffer);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── PDF generator ────────────────────────────────────────────────────────────
 app.post('/generate-pdf', async (req, res) => {
   try {
